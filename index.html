@@ -817,13 +817,13 @@ async function importarSaludTexto(txt, silencioso) {
     const marca = { actualizado: ymd(hoy()) + 'T' + hm(hoy()) };
     S.saludMeta = marca; if (S.db) await S.db.collection('ajustes').doc('salud').set(marca);
     const noches = Object.values(nuevos).filter((x) => x.sueno).length, comidas = Object.values(nuevos).filter((x) => x.kcal).length;
-    if (!silencioso) aviso('Actualizado: ' + noches + ' noches, ' + comidas + ' días de comida');
+    if (!silencioso) aviso('Salud actualizada: ' + noches + ' noches, ' + comidas + ' días de comida');
   } catch (e) { aviso('No se ha podido guardar. Revisa la conexión y vuelve a intentarlo.'); }
   render();
 }
 function botonSalud() {
   const u = S.saludMeta?.actualizado; const d = u ? parseD(u) : null;
-  return '<div class="between" style="gap:8px"><span class="mu xs">' + (d ? 'Datos de Salud del ' + (ymd(d) === ymd(hoy()) ? 'hoy' : fCorta(d)) + ', ' + hm(d) + ' · llegan solos con tu atajo' : 'Prepara tu atajo en Ajustes para que lleguen solos') + '</span>' +
+  return '<div class="between" style="gap:8px"><span class="mu xs">' + (d ? 'Datos de Salud ' + (ymd(d) === ymd(hoy()) ? 'de hoy' : 'del ' + fCorta(d)) + ', ' + hm(d) + ' · llegan solos con tu atajo' : 'Prepara tu atajo en Ajustes para que lleguen solos') + '</span>' +
     '<label class="btn sec slim" for="fileSalud" style="cursor:pointer;white-space:nowrap">Archivo</label><input id="fileSalud" type="file" accept=".txt,text/plain" hidden></div>';
 }
 
@@ -1465,7 +1465,7 @@ function exportarCopia() {
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'reserva_copia_' + ymd(hoy()) + '.json'; document.body.appendChild(a); a.click(); a.remove();
 }
 async function sincronizarSalud() { // lo que envió el atajo entra solo (R-146)
-  try { const p = await Nube.saludPendiente(); if (!p) return; await importarSaludTexto(p.texto, true); await Nube.borrarSalud(p.hasta); } catch (e) { console.warn(e); }
+  try { const p = await Nube.saludPendiente(); if (!p) return; const n = Object.keys(parseSalud(p.texto)).length; await importarSaludTexto(p.texto, !n); await Nube.borrarSalud(p.hasta); } catch (e) { console.warn(e); }
 }
 
 arrancar();
