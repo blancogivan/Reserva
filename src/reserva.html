@@ -224,6 +224,8 @@ h2 { margin: 0; font-size: 26px; }
 .sheet .in { max-width: 520px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
 svg { display: block; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+.ttl { white-space: nowrap; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 21px; letter-spacing: -.01em; line-height: 1.15; color: var(--tx); }
+.ttl.sm2 { font-size: 17px; }
 </style>
 
 <div class="bgfx" aria-hidden="true"></div>
@@ -877,7 +879,7 @@ function ritmoSemanal(semanas, actual, objMin, objMax) { // R-52: cambio de cada
   const barras = ult.map((x) => { const h = Math.round(Math.abs(x.d) / M * 30); return '<div class="rb"><div class="rbz"><i style="height:' + h + 'px;' + (x.d >= 0 ? 'bottom:50%' : 'top:50%') + ';background:' + col(x.d) + '"></i></div><span class="n xs" style="color:' + col(x.d) + '">' + (x.d > 0 ? '+' : x.d < 0 ? '−' : '') + num(Math.abs(x.d), 1) + '</span><span class="xs mu">' + x.b.getDate() + '/' + (x.b.getMonth() + 1) + '</span></div>'; }).join('');
   const dentro = ult.filter((x) => x.d <= objMax && x.d >= objMin).length;
   return '<div class="stack" style="gap:8px;border-top:1px solid var(--line);padding-top:10px;margin-top:4px">' +
-    '<div class="between"><span class="cap">Ritmo semanal</span><span class="xs mu">' + dentro + ' de ' + ult.length + ' semanas en objetivo</span></div>' +
+    '<div class="between"><span class="ttl">Semana a semana</span><span class="xs mu">' + dentro + ' de ' + ult.length + ' semanas en objetivo</span></div>' +
     '<div class="rbars">' + barras + '</div>' +
     '<div class="between" style="gap:10px;background:rgba(255,255,255,.07);border-radius:14px;padding:10px 12px"><span class="sm">Objetivo para tu media de los próximos 7 días</span><span class="n" style="font-size:20px;color:var(--acTx);white-space:nowrap">' + num(actual.m + objMin, 1) + '–' + num(actual.m + objMax, 1) + ' kg</span></div>' +
     '<span class="xs mu">Verde: bajaste entre 0,25 % y 0,5 % de tu peso esa semana (' + num(-objMax, 2) + '–' + num(-objMin, 2) + ' kg). Naranja: subiste, o bajaste más lento o más rápido de lo previsto.</span></div>';
@@ -900,7 +902,7 @@ function vNutricion() {
     const pts = semanas.map((x, i) => (x.m != null ? X(i).toFixed(1) + ',' + Y(x.m).toFixed(1) : null)).filter(Boolean);
     const band = X(i0).toFixed(1) + ',' + Y(v0).toFixed(1) + ' ' + X(11).toFixed(1) + ',' + Y(v0 - 0.0025 * v0 * (11 - i0)).toFixed(1) + ' ' + X(11).toFixed(1) + ',' + Y(v0 - 0.005 * v0 * (11 - i0)).toFixed(1);
     const li = semanas.length - 1 - [...semanas].reverse().findIndex((x) => x.m != null);
-    pesoCard = '<section class="hero plain"><div class="stack" style="gap:4px"><div class="between"><span class="cap">Peso · media de los últimos 7 días</span><span class="n mu" style="font-size:13px">' + fCorta(semanas[0].a) + ' → hoy</span></div>' +
+    pesoCard = '<section class="hero plain"><div class="stack" style="gap:4px"><div class="between"><span class="ttl">Tu tendencia de peso</span><span class="n mu" style="font-size:13px">' + fCorta(semanas[0].a) + ' → hoy</span></div><span class="xs mu" style="margin-top:-2px">Media de los últimos 7 días, sin el ruido del día a día</span>' +
       '<div class="row" style="align-items:baseline;flex-wrap:wrap;gap:10px"><span class="d" style="font-size:56px">' + num(actual.m, 1) + '<span class="mu" style="font-size:24px"> kg</span></span><span class="chip ' + (enObj ? 'ok' : 'warn') + ' n" style="font-size:14px">' + (dlt > 0 ? '+' : dlt < 0 ? '−' : '') + num(Math.abs(dlt), 2) + ' kg vs 7 días anteriores</span></div>' +
       '<span class="xs mu">' + actual.n + (actual.n === 1 ? ' pesada' : ' pesadas') + ' en los últimos 7 días' + (actual.n < 3 ? ': con tan pocas, la media aún se mueve mucho' : '') + '</span>' +
       '<svg width="100%" viewBox="0 0 340 112" role="img" aria-label="Peso medio semanal de las últimas 12 semanas" style="overflow:hidden"><line x1="34" y1="' + Y(Math.round(hi)) + '" x2="340" y2="' + Y(Math.round(hi)) + '" stroke="rgba(255,255,255,.12)" stroke-dasharray="3 4"/><text x="0" y="' + (Y(Math.round(hi)) + 4) + '" font-size="11" fill="#A3AEC0" font-family="Archivo, sans-serif">' + Math.round(hi) + ' kg</text><line x1="34" y1="' + Y(Math.round(lo) + 1) + '" x2="340" y2="' + Y(Math.round(lo) + 1) + '" stroke="rgba(255,255,255,.12)"/><text x="0" y="' + (Y(Math.round(lo) + 1) + 4) + '" font-size="11" fill="#A3AEC0" font-family="Archivo, sans-serif">' + (Math.round(lo) + 1) + ' kg</text><polyline points="' + pts.join(' ') + '" fill="none" stroke="#8AA6FF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="' + X(li).toFixed(1) + '" cy="' + Y(actual.m).toFixed(1) + '" r="5" fill="#8AA6FF" stroke="#10141C" stroke-width="2.5"/></svg>' +
@@ -916,11 +918,11 @@ function vNutricion() {
   if (ult7.length) {
     const mk = media(ult7.map((x) => x.kcal)), mp = media(ult7.filter((x) => x.prot != null).map((x) => x.prot));
     const gkg = pesoRef && mp ? mp / pesoRef : null;
-    comida = '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px"><section class="card pad stack" style="gap:4px"><span class="xs mu">Calorías · media de ' + ult7.length + ' días</span><span class="d" style="font-size:36px">' + Math.round(mk).toLocaleString('es-ES') + '<span class="mu" style="font-size:16px"> kcal</span></span></section>' +
-      '<section class="card pad stack" style="gap:4px"><span class="xs mu">Proteína · media de ' + ult7.length + ' días</span><span class="d" style="font-size:36px">' + (mp ? Math.round(mp) : '–') + '<span class="mu" style="font-size:16px"> g</span></span>' + (gkg ? '<span class="xs" style="font-weight:700;color:' + (gkg >= 1.6 ? 'var(--ok)' : 'var(--warn)') + '">' + num(gkg, 1) + ' g/kg · ' + (gkg >= 1.6 ? 'bien' : 'por debajo de 1,6') + '</span>' : '') + '</section></div>';
+    comida = '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px"><section class="card pad stack" style="gap:4px"><span class="ttl sm2">Calorías</span><span class="xs mu">media de ' + ult7.length + ' días</span><span class="d" style="font-size:36px">' + Math.round(mk).toLocaleString('es-ES') + '<span class="mu" style="font-size:16px"> kcal</span></span></section>' +
+      '<section class="card pad stack" style="gap:4px"><span class="ttl sm2">Proteína</span><span class="xs mu">media de ' + ult7.length + ' días</span><span class="d" style="font-size:36px">' + (mp ? Math.round(mp) : '–') + '<span class="mu" style="font-size:16px"> g</span></span>' + (gkg ? '<span class="xs" style="font-weight:700;color:' + (gkg >= 1.6 ? 'var(--ok)' : 'var(--warn)') + '">' + num(gkg, 1) + ' g/kg · ' + (gkg >= 1.6 ? 'bien' : 'por debajo de 1,6') + '</span>' : '') + '</section></div>';
     const ult14 = dias28.slice(-14); const top = Math.max(3200, ...ult14.map((x) => x.kcal || 0));
     const H = 80;
-    comida += '<section class="card pad stack"><div class="between"><span class="cap">Calorías por día</span><span class="xs mu">línea: media · gris: día incompleto</span></div><div class="kwrap"><span class="nline" style="bottom:' + Math.round(mk / top * H) + 'px"></span><div class="kbars">' + ult14.map((x) => '<div class="kb"><i style="height:' + Math.round(((x.kcal || 0) / top) * H) + 'px;background:' + ((x.kcal || 0) >= DIA_COMPLETO_KCAL ? 'var(--ac2)' : 'rgba(255,255,255,.18)') + '" title="' + (x.kcal || 0) + ' kcal"></i><span class="xs mu">' + x.d.getDate() + '</span></div>').join('') + '</div></div></section>';
+    comida += '<section class="card pad stack"><div class="between"><span class="ttl">Tus últimas dos semanas</span></div><span class="xs mu" style="margin-top:-4px">Calorías de cada día · línea: tu media · gris: día sin apuntar entero</span><div class="kwrap"><span class="nline" style="bottom:' + Math.round(mk / top * H) + 'px"></span><div class="kbars">' + ult14.map((x) => '<div class="kb"><i style="height:' + Math.round(((x.kcal || 0) / top) * H) + 'px;background:' + ((x.kcal || 0) >= DIA_COMPLETO_KCAL ? 'var(--ac2)' : 'rgba(255,255,255,.18)') + '" title="' + (x.kcal || 0) + ' kcal"></i><span class="xs mu">' + x.d.getDate() + '</span></div>').join('') + '</div></div></section>';
   } else comida = '<div class="empty">Cuando el atajo traiga días completos de Foodvisor (más de ' + DIA_COMPLETO_KCAL.toLocaleString('es-ES') + ' kcal apuntadas), aquí verás tus calorías y tu proteína.</div>';
   // mantenimiento real (R-51)
   const NEC = 21;
@@ -931,14 +933,14 @@ function vNutricion() {
     const mx = media(xs), my = media(ys); const pend = xs.reduce((s, x, i) => s + (x - mx) * (ys[i] - my), 0) / xs.reduce((s, x) => s + (x - mx) ** 2, 0);
     const mk = media(completos.map((x) => x.kcal)); const tdee = mk - pend * 7700;
     const def = tdee - mk;
-    mant = '<section class="hero plain"><div class="stack" style="gap:8px"><span class="cap" style="color:var(--acTx)">Tu mantenimiento real</span><span class="d" style="font-size:44px">' + Math.round(tdee / 10) * 10 + '<span class="mu" style="font-size:18px"> kcal/día</span></span>' +
-      '<span class="sm" style="color:var(--tx2)">Para recomponer, come entre <b>' + (Math.round((tdee - 400) / 10) * 10).toLocaleString('es-ES') + ' y ' + (Math.round((tdee - 200) / 10) * 10).toLocaleString('es-ES') + ' kcal</b> y al menos <b>' + Math.round(1.6 * (pesoRef || 0)) + ' g de proteína</b> al día.</span>' +
+    mant = '<section class="hero plain"><div class="stack" style="gap:8px"><span class="ttl">Lo que gastas de verdad</span><span class="d" style="font-size:44px">' + Math.round(tdee / 10) * 10 + '<span class="mu" style="font-size:18px"> kcal/día</span></span>' +
+      '<span class="sm" style="color:var(--tx2)">Para bajar grasa sin perder músculo, come entre <b>' + (Math.round((tdee - 400) / 10) * 10).toLocaleString('es-ES') + ' y ' + (Math.round((tdee - 200) / 10) * 10).toLocaleString('es-ES') + ' kcal</b> y al menos <b>' + Math.round(1.6 * (pesoRef || 0)) + ' g de proteína</b> al día.</span>' +
       (def > 500 ? '<div class="note warn sm" style="color:var(--tx)">Estás comiendo más de 500 kcal por debajo de tu mantenimiento. Un déficit tan grande puede frenar la ganancia de músculo.</div>' : '') +
       '<span class="xs mu">Calculado con ' + completos.length + ' días de comida y la tendencia de tu peso de las últimas 4 semanas (≈7.700 kcal por kg). Es una aproximación: se recalcula cada vez que actualizas.</span></div></section>';
   } else {
-    mant = '<section class="hero plain"><div class="stack" style="gap:8px"><span class="cap" style="color:var(--acTx)">Tu mantenimiento real</span><span class="sm" style="color:var(--tx2)">Se calcula con lo que comes y cómo cambia tu peso, no con las calorías del reloj. Hacen falta ' + NEC + ' días completos de comida en 4 semanas.</span><div class="between xs mu"><span>' + completos.length + ' de ' + NEC + ' días</span><span>' + Math.max(0, NEC - completos.length) + ' por completar</span></div><div class="bar" style="background:rgba(255,255,255,.10)"><i style="width:' + Math.min(100, completos.length / NEC * 100) + '%"></i></div></div></section>';
+    mant = '<section class="hero plain"><div class="stack" style="gap:8px"><span class="ttl">Lo que gastas de verdad</span><span class="sm" style="color:var(--tx2)">Se calcula con lo que comes y cómo cambia tu peso, no con las calorías del reloj. Hacen falta ' + NEC + ' días completos de comida en 4 semanas.</span><div class="between xs mu"><span>' + completos.length + ' de ' + NEC + ' días</span><span>' + Math.max(0, NEC - completos.length) + ' por completar</span></div><div class="bar" style="background:rgba(255,255,255,.10)"><i style="width:' + Math.min(100, completos.length / NEC * 100) + '%"></i></div></div></section>';
   }
-  return '<div class="wrap">' + modoAviso() + '<div class="stack" style="gap:4px"><h1 class="d">Nutrición</h1><span class="mu sm">Recomposición · bajar grasa manteniendo o ganando músculo</span></div>' + botonSalud() + pesoCard + comida + mant +
+  return '<div class="wrap">' + modoAviso() + '<div class="stack" style="gap:4px"><h1 class="d">Nutrición</h1><span class="mu sm">Tu peso, lo que comes y lo que gastas, de un vistazo</span></div>' + botonSalud() + pesoCard + comida + mant +
     '<p class="mu xs" style="margin:0;padding:0 4px">Datos de Foodvisor y de tu báscula, a través de Apple Salud y tu atajo. Esto no es consejo médico: si tienes alguna condición de salud, consulta con un profesional antes de cambiar tu dieta.</p></div>' + tabs('nutricion');
 }
 
@@ -1112,7 +1114,7 @@ function celebrar(nom, set, r) {
 function vProx(cual) {
   const txt = cual === 'descanso'
     ? ['Descanso', 'Llega en la próxima versión. Mostrará cuánto dormiste anoche, tus últimas 7 noches frente al objetivo de 7 horas y a qué hora acostarte cuando entrenas temprano.', 'Los datos ya se están guardando cada mañana con tu atajo de Salud.']
-    : ['Nutrición', 'Llega en la próxima versión. Mostrará la tendencia de tu peso frente al objetivo de recomposición, calorías y proteína de Foodvisor, y tu gasto real calculado con lo que comes y cómo cambia tu peso.', 'Los datos ya se están guardando cada mañana con tu atajo de Salud.'];
+    : ['Nutrición', 'Llega en la próxima versión. Mostrará la tendencia de tu peso frente a tu objetivo, calorías y proteína de Foodvisor, y tu gasto real calculado con lo que comes y cómo cambia tu peso.', 'Los datos ya se están guardando cada mañana con tu atajo de Salud.'];
   return '<div class="wrap"><h1 class="d">' + txt[0] + '</h1><div class="note">' + txt[1] + '</div><p class="mu sm" style="margin:0">' + txt[2] + '</p></div>' + tabs(cual);
 }
 
