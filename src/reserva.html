@@ -226,6 +226,8 @@ svg { display: block; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 .ttl { white-space: nowrap; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 21px; letter-spacing: -.01em; line-height: 1.15; color: var(--tx); }
 .ttl.sm2 { font-size: 17px; }
+.sescard { display: block; width: 100%; padding: 0; text-align: left; font: inherit; color: var(--tx); cursor: pointer; -webkit-tap-highlight-color: transparent; transition: transform .12s; }
+.sescard:active { transform: scale(.985); }
 </style>
 
 <div class="bgfx" aria-hidden="true"></div>
@@ -589,7 +591,7 @@ function vCalendario() {
   }
   const sd = parseD(sel); const ss = S.ses.filter((s) => ymd(parseD(s.fecha)) === sel); const aa = S.act.filter((a) => a.fecha === sel);
   let det = '';
-  for (const s of ss) { const tot = s.ejercicios.reduce((x, e) => x + e.series.length, 0); const di = parseD(s.fecha); const df = new Date(di.getTime() + (s.minutos || 0) * 60000); det += '<div class="card" style="overflow:hidden"><div class="stripe ' + (S.rut[s.rutina]?.tipo === 'pierna' || /pierna/i.test(s.nombre) ? 'pierna' : '') + '"></div><div class="pad"><div class="between"><span class="d" style="font-size:24px">' + esc(s.rutina ? (S.rut[s.rutina]?.nombre || s.nombre) : s.nombre) + '</span>' + (s.minutos ? '<span class="chip ac n" style="font-size:14px">' + s.minutos + ' min</span>' : '') + '</div><div class="row mu xs" style="margin-top:4px;gap:12px"><span class="n" style="font-size:13px">' + di.getHours() + ':' + pad2(di.getMinutes()) + (s.minutos ? '–' + df.getHours() + ':' + pad2(df.getMinutes()) : '') + '</span><span>' + s.ejercicios.length + ' ejercicios · ' + tot + ' series</span></div><div class="list" style="margin-top:6px">' + s.ejercicios.map((e) => '<div class="between sm" style="padding:5px 0"><span class="minw" style="font-weight:500">' + esc(nombre(e.ej)) + '</span><span class="n mu" style="font-size:14px;white-space:nowrap">' + e.series.map((x) => kgf(x.kg) + '×' + x.reps).join(' · ') + '</span></div>').join('') + '</div></div></div>'; }
+  for (const s of ss) { const tot = s.ejercicios.reduce((x, e) => x + e.series.length, 0); const di = parseD(s.fecha); const df = new Date(di.getTime() + (s.minutos || 0) * 60000); det += '<button type="button" class="card sescard" data-act="detSes" data-id="' + esc(s._id) + '" aria-label="Ver el detalle de ' + esc(s.nombre) + '" style="overflow:hidden"><div class="stripe ' + (S.rut[s.rutina]?.tipo === 'pierna' || /pierna/i.test(s.nombre) ? 'pierna' : '') + '"></div><div class="pad"><div class="between"><span class="d" style="font-size:24px">' + esc(s.rutina ? (S.rut[s.rutina]?.nombre || s.nombre) : s.nombre) + '</span>' + (s.minutos ? '<span class="chip ac n" style="font-size:14px">' + s.minutos + ' min</span>' : '') + '</div><div class="row mu xs" style="margin-top:4px;gap:12px"><span class="n" style="font-size:13px">' + di.getHours() + ':' + pad2(di.getMinutes()) + (s.minutos ? '–' + df.getHours() + ':' + pad2(df.getMinutes()) : '') + '</span><span>' + s.ejercicios.length + ' ejercicios · ' + tot + ' series</span></div><div class="list" style="margin-top:6px">' + s.ejercicios.map((e) => '<div class="between sm" style="padding:5px 0"><span class="minw" style="font-weight:500">' + esc(nombre(e.ej)) + '</span><span class="n mu" style="font-size:14px;white-space:nowrap">' + e.series.map((x) => kgf(x.kg) + '×' + x.reps).join(' · ') + '</span></div>').join('') + '</div><div class="between xs" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line);color:#8AA6FF;font-weight:700"><span>Ver el detalle</span>' + I.chev + '</div></div></button>'; }
   for (const a of aa) det += '<div class="card pad between"><span class="row"><span class="dot" style="width:10px;height:10px;background:' + (a.tipo === 'Baloncesto (partido)' ? 'var(--mt)' : 'var(--sp)') + '"></span><span><b>' + esc(a.tipo) + '</b><br><span class="mu xs">' + (a.minutos ? a.minutos + ' min' : 'sin duración') + (a.rpe ? ' · esfuerzo ' + a.rpe + '/10 · carga ' + (a.minutos * a.rpe) : '') + (a.planificada ? ' · planificada' : '') + '</span></span></span><button class="icon" data-act="borrarAct" data-id="' + esc(a._id) + '" aria-label="Borrar ' + esc(a.tipo) + '">' + I.trash + '</button></div>';
   if (!det) det = '<div class="empty">' + (sd > t ? 'Aún no hay nada planificado este día.' : 'No hay nada registrado este día.') + '</div>';
   const label = DIAS[sd.getDay()].replace(/^./, (x) => x.toUpperCase()) + ' ' + sd.getDate();
@@ -598,6 +600,63 @@ function vCalendario() {
     '<span class="cap" style="padding:0 4px">' + label + '</span>' + det +
     '<div class="card pad stack"><span class="cap">Añadir actividad a este día</span><select id="dep" class="field" aria-label="Deporte">' + DEPORTES.map((x) => '<option>' + x + '</option>').join('') + '</select><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px"><label class="lbl xs mu" for="min">Minutos<input id="min" class="field" inputmode="numeric" placeholder="60"></label><label class="lbl xs mu" for="rpe">Esfuerzo (1–10)<input id="rpe" class="field" inputmode="numeric" placeholder="7"></label></div><span class="mu xs">Minutos × esfuerzo da la carga de la sesión (método sRPE, Foster 2001). Un partido el lunes o el martes intercambia Pierna y Repaso esa semana.</span><button class="btn" data-act="addAct">Añadir</button></div>' +
     '</div>' + tabs('calendario');
+}
+
+/* ---------- detalle de una sesión registrada (desde Calendario) ----------
+   1RM estimado con Epley, solo 1–12 reps (R-101) · series por músculo: directas 1, indirectas según su peso (R-10)
+   récord = mejor 1RM estimado que en todas las sesiones anteriores de ese ejercicio */
+function vDetSesion() {
+  const s = S.ses.find((x) => x._id === S.detId); if (!s) return vCalendario();
+  const di = parseD(s.fecha); const df = new Date(di.getTime() + (s.minutos || 0) * 60000);
+  const pierna = S.rut[s.rutina]?.tipo === 'pierna' || /pierna/i.test(s.nombre);
+  const volu = (x) => x.ejercicios.reduce((t, e) => t + (S.cat[e.ej]?.ayuda ? 0 : e.series.reduce((u, y) => u + y.kg * y.reps, 0)), 0);
+  const vol = volu(s); const tot = s.ejercicios.reduce((t, e) => t + e.series.length, 0);
+  const prev = s.rutina ? sesOrd().filter((x) => x.rutina === s.rutina && x.fecha < s.fecha).slice(-1)[0] : null;
+  const rirs = s.ejercicios.flatMap((e) => e.series.map((x) => x.rir)).filter((v) => v != null);
+  const rirM = rirs.length ? media(rirs) : null;
+  let nRec = 0;
+  const ejs = s.ejercicios.map((e) => {
+    const c = S.cat[e.ej] || {};
+    const antes = historial(e.ej).filter((x) => x.fecha < s.fecha);
+    const mejorAntes = antes.length ? Math.max(...antes.map((x) => mejorE1(x.series) || 0)) : null;
+    const ult = antes.slice(-1)[0];
+    const e1 = c.ayuda ? null : mejorE1(e.series);
+    const rec = !c.ayuda && e1 != null && mejorAntes != null && e1 > mejorAntes + 0.01; if (rec) nRec++;
+    let iTop = -1; if (e1 != null) iTop = e.series.findIndex((x) => Math.abs((epley(x.kg, x.reps) || 0) - e1) < 1e-9);
+    const filas = e.series.map((x, k) => '<div class="setrow done' + (rec && k === iTop ? ' pr' : '') + '"><span class="sn ok">' + (rec && k === iTop ? I.star : k + 1) + '</span><span class="n" style="font-size:20px">' + kgf(x.kg) + '</span><span class="n" style="font-size:20px">' + x.reps + '</span><span class="n mu" style="font-size:15px;text-align:right">' + (x.rir == null ? '–' : x.rir >= 3 ? '3+' : x.rir) + '</span></div>').join('');
+    let pie = '';
+    if (e1 != null) {
+      const u1 = ult ? mejorE1(ult.series) : null; const d = u1 != null ? e1 - u1 : null;
+      pie = '<div class="between xs" style="gap:8px;flex-wrap:wrap"><span class="mu">1RM estimado <b class="n" style="color:var(--tx);font-size:14px">' + num(e1, 1) + ' kg</b></span>' +
+        (d != null ? '<span class="n" style="font-size:13px;font-weight:700;color:' + (d > 0.01 ? 'var(--ok)' : d < -0.01 ? 'var(--warn)' : 'var(--mu)') + '">' + (d > 0.01 ? '▲ +' : d < -0.01 ? '▼ −' : '= ') + num(Math.abs(d), 1) + ' kg vs ' + fCorta(parseD(ult.fecha)) + '</span>' : '<span class="mu">primera vez</span>') + '</div>';
+    }
+    if (ult) pie += '<span class="xs mu">Última vez (' + fCorta(parseD(ult.fecha)) + '): <span class="n" style="font-size:13px">' + ult.series.map((x) => kgf(x.kg) + '×' + x.reps).join(' · ') + '</span></span>';
+    return '<section class="card" style="overflow:hidden"><div class="pad stack" style="gap:6px;padding-bottom:8px"><div class="between" style="gap:8px"><span class="ttl sm2" style="white-space:normal">' + esc(nombre(e.ej)) + '</span>' + (rec ? '<span class="chip n" style="background:rgba(242,183,5,.18);color:#F5C842;flex:0 0 auto">' + I.star + ' Récord</span>' : '') + '</div>' +
+      '<div class="row" style="flex-wrap:wrap;gap:6px">' + Object.entries(c.musculos || {}).filter(([, w]) => w === 1).map(([m]) => '<span class="chip ac">' + esc(m) + '</span>').join('') + '</div></div>' +
+      '<div class="setrow head cap"><span>Serie</span><span>kg</span><span>Reps</span><span style="text-align:right">RIR</span></div>' + filas +
+      (pie ? '<div class="pad stack" style="gap:4px;padding-top:10px;border-top:1px solid var(--line)">' + pie + '</div>' : '') + '</section>';
+  }).join('');
+  // series por músculo en esta sesión
+  const mv = {}; for (const e of s.ejercicios) { const m = S.cat[e.ej]?.musculos || {}; for (const k in m) mv[k] = (mv[k] || 0) + m[k] * e.series.length; }
+  const mus = Object.entries(mv).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]); const mmax = mus.length ? mus[0][1] : 1;
+  const musCard = mus.length ? '<section class="card pad stack" style="gap:10px"><div class="stack" style="gap:2px"><span class="ttl">Músculos trabajados</span><span class="xs mu">Series de esta sesión · las indirectas cuentan la mitad</span></div>' +
+    mus.map(([m, v]) => '<div class="stack" style="gap:4px"><div class="between sm"><span style="font-weight:500">' + esc(m) + '</span><span class="n mu" style="font-size:14px">' + num(v, v % 1 ? 1 : 0) + '</span></div><div class="bar" style="background:rgba(255,255,255,.08)"><i style="width:' + Math.round(v / mmax * 100) + '%;background:' + (pierna ? 'var(--leg)' : 'var(--ac2)') + '"></i></div></div>').join('') + '</section>' : '';
+  // cómo llegabas: la noche anterior y el pulso en reposo de ese día
+  const sd = saludDia(ymd(di)); let llegada = '';
+  if (sd && (sd.sueno || sd.fc)) {
+    const h = sd.sueno ? Math.floor(sd.sueno.min / 60) + ' h ' + pad2(sd.sueno.min % 60) : null;
+    llegada = '<section class="card pad stack" style="gap:10px"><span class="ttl">Cómo llegabas</span><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">' +
+      (h ? '<div><span class="d" style="font-size:30px;' + (sd.sueno.min < 420 ? 'color:var(--warn)' : '') + '">' + h + '</span><br><span class="xs mu">dormidas la noche antes</span></div>' : '') +
+      (sd.fc ? '<div><span class="d" style="font-size:30px">' + Math.round(sd.fc) + '<span class="mu" style="font-size:15px"> ppm</span></span><br><span class="xs mu">pulso en reposo ese día</span></div>' : '') + '</div></section>';
+  }
+  const comp = prev ? (() => { const d = vol - volu(prev); return '<span class="chip ' + (d >= 0 ? 'ok' : 'warn') + ' n" style="font-size:14px;align-self:flex-start">' + (d >= 0 ? '+' : '−') + Math.round(Math.abs(d)).toLocaleString('es-ES') + ' kg vs ' + fCorta(parseD(prev.fecha)) + '</span>'; })() : '';
+  const fecha = DIAS[di.getDay()].replace(/^./, (x) => x.toUpperCase()) + ' ' + di.getDate() + ' de ' + MESES[di.getMonth()];
+  return '<div class="wrap noTab"><div class="top"><button class="back" data-act="volver">' + I.back + 'Calendario</button><span class="n mu" style="font-size:14px">' + di.getHours() + ':' + pad2(di.getMinutes()) + (s.minutos ? '–' + df.getHours() + ':' + pad2(df.getMinutes()) : '') + '</span></div>' +
+    '<section class="hero' + (pierna ? ' leg' : '') + '"><div class="stack" style="gap:12px"><span class="cap">' + fecha + '</span><h1 class="d" style="font-size:44px">' + esc(s.rutina ? (S.rut[s.rutina]?.nombre || s.nombre) : s.nombre) + '</h1>' +
+    '<div class="stack" style="gap:2px"><span class="d" style="font-size:56px">' + Math.round(vol).toLocaleString('es-ES') + '<span class="mu" style="font-size:22px"> kg</span></span><span class="mu sm">levantados en total (peso × repeticiones)</span></div>' + comp +
+    '<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;border-top:1px solid var(--line);padding-top:12px">' + [['min', s.minutos || '–'], ['series', tot], ['RIR medio', rirM == null ? '–' : num(rirM, 1)], ['récords', nRec]].map(([l, v], i) => '<div><span class="d" style="font-size:30px;' + (i === 3 && v ? 'color:#F5C842' : '') + '">' + v + '</span><br><span class="mu xs">' + l + '</span></div>').join('') + '</div></div></section>' +
+    llegada + ejs + musCard +
+    '<p class="mu xs" style="margin:0;padding:0 4px">1RM estimado con la fórmula de Epley, solo con series de 1 a 12 repeticiones. Es una estimación: no hace falta probar tu máximo real.</p></div>';
 }
 
 function vProgreso() {
@@ -1128,6 +1187,7 @@ function render() {
   else if (v === 'sesion') h = vSesion();
   else if (v === 'resumen') h = vResumen();
   else if (v === 'calendario') h = vCalendario();
+  else if (v === 'detSes') h = vDetSesion();
   else if (v === 'progreso') h = vProgreso();
   else if (v === 'descanso') h = vDescanso();
   else if (v === 'nutricion') h = vNutricion();
@@ -1222,6 +1282,7 @@ document.addEventListener('click', async (ev) => {
       S.endWarn = false; await terminar(); break;
     }
     case 'calSel': S.calSel = v; render(); break;
+    case 'detSes': S.detId = b.dataset.id; ir('detSes'); break;
     case 'mes': { const t = hoy(); const M = S.calMes || new Date(t.getFullYear(), t.getMonth(), 1); S.calMes = new Date(M.getFullYear(), M.getMonth() + (+b.dataset.d), 1); render(); break; }
     case 'addAct': {
       const f = S.calSel || ymd(hoy()); const tipo = $('#dep').value; const min = parseInt($('#min').value, 10) || 0; const rpe = Math.min(10, Math.max(0, parseInt($('#rpe').value, 10) || 0)) || null;
