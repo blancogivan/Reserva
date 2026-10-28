@@ -930,16 +930,20 @@ function vDescanso() {
 
 /* ---------- Nutrición ---------- */
 
-function ritmoSemanal(semanas, actual, objMin, objMax) { // R-52: cambio de cada bloque de 7 días frente al anterior
+function ritmoSemanal(semanas, actual, objMin, objMax) { // R-52 + R-153: cambio de la media de cada semana natural (lunes–domingo) frente a la anterior
+  const t = hoy(); const L0 = lunes(t); const sem = [];
+  for (let k = 8; k >= 0; k--) { const a = new Date(L0); a.setDate(L0.getDate() - 7 * k); const b = new Date(a); b.setDate(a.getDate() + 6); const ps = saludRango(a, b > t ? t : b).filter((x) => x.peso).map((x) => x.peso); sem.push({ a, m: media(ps), n: ps.length, curso: k === 0 }); }
   const cambios = [];
-  for (let i = 1; i < semanas.length; i++) if (semanas[i].m != null && semanas[i - 1].m != null) cambios.push({ b: semanas[i].b, d: semanas[i].m - semanas[i - 1].m });
+  for (let i = 1; i < sem.length; i++) { const x = sem[i], y = sem[i - 1]; if (x.m != null && y.m != null) cambios.push({ a: x.a, d: x.m - y.m, curso: x.curso, lo: -0.005 * y.m, hi: -0.0025 * y.m }); }
   const ult = cambios.slice(-8); const M = Math.max(0.6, ...ult.map((x) => Math.abs(x.d)));
-  const col = (d) => (d <= objMax && d >= objMin ? 'var(--ok)' : 'var(--warn)');
-  const barras = ult.map((x) => { const h = Math.round(Math.abs(x.d) / M * 30); return '<div class="rb"><div class="rbz"><i style="height:' + h + 'px;' + (x.d >= 0 ? 'bottom:50%' : 'top:50%') + ';background:' + col(x.d) + '"></i></div><span class="n xs" style="color:' + col(x.d) + '">' + (x.d > 0 ? '+' : x.d < 0 ? '−' : '') + num(Math.abs(x.d), 1) + '</span><span class="xs mu">' + x.b.getDate() + '/' + (x.b.getMonth() + 1) + '</span></div>'; }).join('');
-  const dentro = ult.filter((x) => x.d <= objMax && x.d >= objMin).length;
+  const en = (x) => x.d <= x.hi && x.d >= x.lo;
+  const col = (x) => (en(x) ? 'var(--ok)' : 'var(--warn)');
+  const barras = ult.map((x) => { const h = Math.round(Math.abs(x.d) / M * 30); return '<div class="rb"' + (x.curso ? ' style="opacity:.55"' : '') + '><div class="rbz"><i style="height:' + h + 'px;' + (x.d >= 0 ? 'bottom:50%' : 'top:50%') + ';background:' + col(x) + (x.curso ? ';outline:1.5px dashed rgba(255,255,255,.55);outline-offset:1px' : '') + '"></i></div><span class="n xs" style="color:' + col(x) + '">' + (x.d > 0 ? '+' : x.d < 0 ? '−' : '') + num(Math.abs(x.d), 1) + '</span><span class="xs mu">' + (x.curso ? 'esta' : x.a.getDate() + '/' + (x.a.getMonth() + 1)) + '</span></div>'; }).join('');
+  const cerradas = ult.filter((x) => !x.curso); const dentro = cerradas.filter(en).length;
   return '<div class="stack" style="gap:8px;border-top:1px solid var(--line);padding-top:10px;margin-top:4px">' +
-    '<div class="between"><span class="ttl">Semana a semana</span><span class="xs mu">' + dentro + ' de ' + ult.length + ' semanas en objetivo</span></div>' +
+    '<div class="between"><span class="ttl">Semana a semana</span><span class="xs mu">' + dentro + ' de ' + cerradas.length + ' semanas en objetivo</span></div>' +
     '<div class="rbars">' + barras + '</div>' +
+    '<span class="xs mu">Cada barra compara tu media de lunes a domingo con la de la semana anterior; la fecha es el lunes. Las semanas cerradas ya no cambian. La de esta semana (punteada) se va completando hasta el domingo.</span>' +
     '<div class="between" style="gap:10px;background:rgba(255,255,255,.07);border-radius:14px;padding:10px 12px"><span class="sm">Objetivo para tu media de los próximos 7 días</span><span class="n" style="font-size:20px;color:var(--acTx);white-space:nowrap">' + num(actual.m + objMin, 1) + '–' + num(actual.m + objMax, 1) + ' kg</span></div>' +
     '<span class="xs mu">Verde: bajaste entre 0,25 % y 0,5 % de tu peso esa semana (' + num(-objMax, 2) + '–' + num(-objMin, 2) + ' kg). Naranja: subiste, o bajaste más lento o más rápido de lo previsto.</span></div>';
 }
