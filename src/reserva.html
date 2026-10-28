@@ -471,7 +471,7 @@ function vEditar() {
     return '<div class="card" style="padding:8px 10px 8px 12px;' + (open ? 'border-color:var(--ac)' : '') + '"><div class="row"><span class="n mu" style="width:20px">' + (i + 1) + '</span><span class="grow"><span style="font-weight:600">' + esc(nombre(e.ej)) + '</span><br><span class="mu xs">' + e.series + ' × ' + e.min + '–' + e.max + (s.kg != null ? ' · última ' + kgf(maxKg(historial(e.ej).slice(-1)[0].series)) + ' kg' : '') + '</span></span>' +
       '<span class="row" style="gap:4px"><button class="icon" data-act="series" data-i="' + i + '" data-d="-1" aria-label="Una serie menos">−</button><span class="n" style="width:14px;text-align:center">' + e.series + '</span><button class="icon" data-act="series" data-i="' + i + '" data-d="1" aria-label="Una serie más">+</button></span></div>' +
       '<div class="row" style="margin-top:6px;gap:6px"><button class="btn sec slim" data-act="altOpen" data-i="' + i + '" aria-expanded="' + open + '" style="flex:1">Cambiar</button><button class="btn sec slim" data-act="subir" data-i="' + i + '" aria-label="Subir">↑</button><button class="btn sec slim" data-act="quitar" data-i="' + i + '" aria-label="Quitar ' + esc(nombre(e.ej)) + '">' + I.trash + '</button></div>' +
-      (open ? '<div class="stack" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line)"><span class="cap">Alternativas para el mismo músculo</span>' + (alts || '<span class="mu sm">No hay otras variantes de este grupo en tu catálogo.</span>') + '</div>' : '') + '</div>';
+      (open ? '<div class="stack" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line)"><span class="cap">Alternativas para el mismo músculo</span>' + (alts || '<span class="mu sm">No hay otras variantes de este grupo en tu catálogo.</span>') + '<button type="button" class="link" data-act="cambioEj" data-src="draft" data-i="' + i + '" style="align-self:flex-start;padding-left:0">Buscar otro o crear uno nuevo</button></div>' : '') + '</div>';
   }).join('');
   return '<div class="wrap noTab"><div class="top"><button class="back" data-act="volver">' + I.back + 'Volver</button><span class="n mu" style="font-size:14px">' + D.items.length + ' ejercicios · ' + sets + ' series</span></div><h1 class="d">' + esc(D.nombre) + ' de hoy</h1>' + rows +
     '<button type="button" class="dash" data-act="pick">' + I.plus + 'Añadir ejercicio</button>' +
@@ -532,7 +532,7 @@ function vSesion() {
     '<section class="hero' + (/cuad|isquios|gluteo|gemelo|abdomen/.test(c.grupo || '') ? ' leg' : '') + '"><div class="stack" style="gap:8px">' +
     '<h1 class="d" style="font-size:36px">' + esc(nombre(e.ej)) + '</h1>' +
     '<div class="row" style="flex-wrap:wrap;gap:6px">' + Object.entries(c.musculos || {}).filter(([, w]) => w === 1).map(([m]) => '<span class="chip ac">' + esc(m) + '</span>').join('') + '<span class="chip">' + plan.series + ' series · ' + plan.min + '–' + plan.max + ' reps · RIR ' + esc(plan.rir) + '</span></div>' +
-    (sug.ult ? '<span class="mu sm">Última vez (' + fCorta(parseD(sug.fecha)) + '): <span class="n" style="font-size:15px;color:var(--tx)">' + esc(sug.ult) + '</span></span>' : '') +
+    (n === 0 ? '<button type="button" class="btn sec slim" data-act="cambioEj" data-src="sesion" data-i="' + i + '" style="align-self:flex-start">Cambiar por otro ejercicio</button>' : '') + (sug.ult ? '<span class="mu sm">Última vez (' + fCorta(parseD(sug.fecha)) + '): <span class="n" style="font-size:15px;color:var(--tx)">' + esc(sug.ult) + '</span></span>' : '') +
     '<span class="sm" style="' + (sug.tipo === 'sube' ? 'color:var(--warn);font-weight:700' : 'color:var(--tx2)') + '">' + esc(sug.txt || '') + '</span>' +
     (est ? '<div class="note warn sm" style="color:var(--tx)">Llevas 3 sesiones sin mejorar tu fuerza estimada en este ejercicio. Puedes probar otra variante o cambiar el rango de repeticiones.</div>' : '') + '</div></section>' +
     '<section class="card" style="overflow:hidden"><div class="setrow head cap"><span>Serie</span><span>kg</span><span>Reps</span><span style="text-align:right">RIR</span></div>' + rows +
@@ -568,6 +568,59 @@ function vResumen() {
     '<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;border-top:1px solid var(--line);padding-top:12px">' + [['min', s.minutos], ['series', tot], ['récords', records.length]].map(([l, v], i) => '<div><span class="d" style="font-size:36px;' + (i === 2 && v ? 'color:#F5C842' : '') + '">' + v + '</span><br><span class="mu xs">' + l + '</span></div>').join('') + '</div></div></section>' +
     '<section class="card pad"><div class="between" style="padding-bottom:4px"><span class="cap">Ejercicio a ejercicio</span><span class="xs mu">' + (prev ? 'frente a la última vez' : '') + '</span></div><div class="list">' + filas + '</div></section>' +
     '<button class="btn" data-act="tab" data-v="hoy">Volver a Hoy</button></div>' + tabs('hoy');
+}
+
+/* ---------- cambiar un ejercicio por otro parecido (R-154) ----------
+   En la sesión (si aún no tiene series) o al preparar el día. El nuevo hereda el plan (series, reps, RIR).
+   Crear uno nuevo copia los músculos y el tipo del que sustituye, para que el recuento de series siga siendo correcto (R-10). */
+function cambioActual() {
+  const c = S.cambio; if (!c) return null;
+  if (c.src === 'sesion') { const e = S.activa?.ejercicios[c.i]; return e ? { ej: e.ej, plan: e.plan } : null; }
+  const e = S.draft?.items[c.i]; return e ? { ej: e.ej, plan: { series: e.series, min: e.min, max: e.max, rir: e.rir } } : null;
+}
+function vCambioEj() {
+  const cur = cambioActual(); if (!cur) return vHoy();
+  const norm = (x) => x.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const q = norm(S.qc || ''); const g = S.cat[cur.ej]?.grupo;
+  const usados = new Set((S.cambio.src === 'sesion' ? S.activa.ejercicios : S.draft.items).map((x) => x.ej));
+  const fila = (k) => { const u = historial(k).slice(-1)[0]; return '<button type="button" data-act="cambiarA" data-id="' + k + '" class="between" style="width:100%;min-height:56px;padding:6px 4px;border:0;border-top:1px solid var(--line);background:transparent;text-align:left;color:var(--tx)"><span class="minw"><span style="font-weight:600">' + esc(S.cat[k].nombre) + '</span><br><span class="mu xs">' + (u ? fCorta(parseD(u.fecha)) + ' · ' + u.series.map((x) => kgf(x.kg) + '×' + x.reps).join(' · ') : 'sin registros') + '</span></span><span class="chip ac" style="flex:0 0 auto">Usar</span></button>'; };
+  const libres = Object.keys(S.cat).filter((k) => !usados.has(k));
+  const mismos = libres.filter((k) => S.cat[k].grupo === g);
+  const otros = q ? libres.filter((k) => S.cat[k].grupo !== g && norm(S.cat[k].nombre).includes(q)) : [];
+  const mis = (q ? mismos.filter((k) => norm(S.cat[k].nombre).includes(q)) : mismos);
+  const rid = S.cambio.src === 'sesion' ? S.activa.rutina : S.draft.rid;
+  return '<div class="wrap noTab"><div class="top"><button class="back" data-act="volver">' + I.back + 'Volver</button></div>' +
+    '<div class="stack" style="gap:4px"><h1 class="d" style="font-size:34px">Cambiar ' + esc(nombre(cur.ej)) + '</h1><span class="mu sm">El nuevo ejercicio mantiene el plan: ' + cur.plan.series + ' series de ' + cur.plan.min + '–' + cur.plan.max + ' reps, RIR ' + esc(cur.plan.rir) + '.</span></div>' +
+    (rid ? '<div class="seg"><button type="button" data-act="cambioScope" data-v="hoy" aria-pressed="' + (S.cambioScope !== 'rutina') + '">Solo hoy</button><button type="button" data-act="cambioScope" data-v="rutina" aria-pressed="' + (S.cambioScope === 'rutina') + '">También en ' + esc(S.rut[rid]?.nombre || 'la rutina') + '</button></div>' : '') +
+    '<div class="card pad stack"><label for="buscarC" class="cap">Buscar</label><input id="buscarC" class="field" type="search" placeholder="remo, máquina, polea…" value="' + esc(S.qc || '') + '" autocomplete="off">' +
+    '<div id="resC">' + resultadosCambio(mis, otros, fila) + '</div></div>' +
+    '<div class="card pad stack"><span class="ttl sm2">¿No está en la lista?</span><span class="xs mu">Créalo como variante de ' + esc(nombre(cur.ej)) + ': contará para los mismos músculos (' + esc(Object.keys(S.cat[cur.ej]?.musculos || {}).join(', ')) + ').</span>' +
+    '<input id="nuevoEj" class="field" placeholder="p. ej. Remo iso-lateral en máquina" autocomplete="off" value="' + esc(S.nuevoEj || '') + '"><button class="btn" data-act="crearEj">Crear y usar</button></div>' +
+    '<p class="mu xs" style="margin:0;padding:0 4px">Si cambias un ejercicio por dolor, no lo fuerces: si el dolor sigue, consúltalo con un fisioterapeuta o un médico.</p></div>';
+}
+function resultadosCambio(mis, otros, fila) {
+  return (mis.length ? '<span class="cap" style="margin-top:6px">Mismo tipo de ejercicio</span>' + mis.map(fila).join('') : '') +
+    (otros.length ? '<span class="cap" style="margin-top:10px">Otros</span>' + otros.slice(0, 20).map(fila).join('') : '') +
+    (!mis.length && !otros.length ? '<span class="mu sm">Nada con ese nombre. Puedes crearlo abajo.</span>' : '');
+}
+async function aplicarCambio(nuevo) {
+  const c = S.cambio; const cur = cambioActual(); if (!c || !cur) return;
+  if (c.src === 'sesion') { const a = S.activa; a.ejercicios[c.i] = prepEj({ ej: nuevo, series: cur.plan.series, min: cur.plan.min, max: cur.plan.max, rir: cur.plan.rir }); a.extra = false; cargarInputs(); guardarActiva(); }
+  else { S.draft.items[c.i] = Object.assign({}, S.draft.items[c.i], { ej: nuevo }); S.altOpen = -1; }
+  const rid = c.src === 'sesion' ? S.activa.rutina : S.draft.rid;
+  if (S.cambioScope === 'rutina' && rid && S.rut[rid]) { const r = JSON.parse(JSON.stringify(S.rut[rid])); const it = r.ejercicios.find((x) => x.ej === cur.ej); if (it) { it.ej = nuevo; await guardar('rutinas', rid, r).catch(() => {}); } }
+  aviso('Cambiado por ' + nombre(nuevo) + (S.cambioScope === 'rutina' && rid ? ' (también en la rutina)' : ' (solo hoy)'));
+  S.cambio = null; S.qc = ''; S.nuevoEj = ''; S.cambioScope = 'hoy'; volver();
+}
+async function crearEjercicio() {
+  const cur = cambioActual(); const nom = ($('#nuevoEj')?.value || '').trim();
+  if (!cur || nom.length < 3) { aviso('Escribe el nombre del ejercicio'); return; }
+  const base = S.cat[cur.ej] || {};
+  const ex = Object.keys(S.cat).find((k) => S.cat[k].nombre.toLowerCase() === nom.toLowerCase()); if (ex) { await aplicarCambio(ex); return; }
+  let id = nom.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'ej'; while (S.cat[id]) id += '-2';
+  const items = Object.assign({}, S.cat, { [id]: { nombre: nom, grupo: base.grupo || 'otro', musculos: Object.assign({}, base.musculos || {}), compuesto: !!base.compuesto, ayuda: !!base.ayuda, inc: base.inc || 2.5, creado: ymd(hoy()) } });
+  S.cat = items; try { await guardar('catalogo', 'ejercicios', { items }); } catch (e) { return; }
+  await aplicarCambio(id);
 }
 
 function vCalendario() {
@@ -1192,6 +1245,7 @@ function render() {
   else if (v === 'resumen') h = vResumen();
   else if (v === 'calendario') h = vCalendario();
   else if (v === 'detSes') h = vDetSesion();
+  else if (v === 'cambioEj') h = vCambioEj();
   else if (v === 'progreso') h = vProgreso();
   else if (v === 'descanso') h = vDescanso();
   else if (v === 'nutricion') h = vNutricion();
@@ -1285,6 +1339,10 @@ document.addEventListener('click', async (ev) => {
       if (f > 0 && !S.endWarn) { S.endWarn = true; aviso('Quedan ' + f + ' series sin hacer. Toca otra vez para terminar igualmente.'); setTimeout(() => { S.endWarn = false; }, 6000); break; }
       S.endWarn = false; await terminar(); break;
     }
+    case 'cambioEj': S.cambio = { src: b.dataset.src, i: +b.dataset.i }; S.qc = ''; S.nuevoEj = ''; S.cambioScope = 'hoy'; ir('cambioEj'); break;
+    case 'cambiarA': await aplicarCambio(b.dataset.id); break;
+    case 'crearEj': await crearEjercicio(); break;
+    case 'cambioScope': S.cambioScope = v; S.nuevoEj = $('#nuevoEj')?.value || ''; render(); break;
     case 'calSel': S.calSel = v; render(); break;
     case 'detSes': S.detId = b.dataset.id; ir('detSes'); break;
     case 'mes': { const t = hoy(); const M = S.calMes || new Date(t.getFullYear(), t.getMonth(), 1); S.calMes = new Date(M.getFullYear(), M.getMonth() + (+b.dataset.d), 1); render(); break; }
@@ -1314,6 +1372,8 @@ document.addEventListener('click', async (ev) => {
 });
 document.addEventListener('input', (ev) => {
   const t = ev.target;
+  if (t.id === 'buscarC') { S.qc = t.value; const tmp = document.createElement('div'); tmp.innerHTML = vCambioEj(); const r = $('#resC'); if (r) r.innerHTML = tmp.querySelector('#resC').innerHTML; }
+  if (t.id === 'nuevoEj') S.nuevoEj = t.value;
   if (t.id === 'buscar') { S.q = t.value; const tmp = document.createElement('div'); tmp.innerHTML = vPicker(); const r = $('#res'); if (r) r.innerHTML = tmp.querySelector('#res').innerHTML; }
 });
 document.addEventListener('change', (ev) => {
