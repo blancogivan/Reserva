@@ -1003,6 +1003,19 @@ function vDescanso() {
 
 /* ---------- Nutrición ---------- */
 
+function objetivoSemana(sem) { // R-155: objetivo fijo para la media de la semana en curso, calculado con la media de la semana anterior (R-52)
+  const act = sem[sem.length - 1], ant = sem[sem.length - 2];
+  if (!ant || ant.m == null) return '';
+  const lo = ant.m * (1 - 0.005), hi = ant.m * (1 - 0.0025); const f1 = (x) => x.toFixed(1).replace('.', ',');
+  const dom = new Date(act.a); dom.setDate(act.a.getDate() + 6);
+  let estado = '<span class="xs mu">Aún no te has pesado esta semana.</span>';
+  if (act.m != null) {
+    const v = act.m; const dentro = v >= lo && v <= hi;
+    const txt = dentro ? 'dentro del objetivo' : v > hi ? f1(v - hi) + ' kg por encima del objetivo' : f1(lo - v) + ' kg por debajo (bajando más rápido de lo previsto)';
+    estado = '<div class="stack xs" style="gap:2px"><span class="mu">Llevas <b class="n" style="font-size:14px;color:var(--tx)">' + num(v, 1) + ' kg</b> de media (' + act.n + (act.n === 1 ? ' pesada' : ' pesadas') + ')</span><span style="font-weight:700;color:' + (dentro ? 'var(--ok)' : 'var(--warn)') + '">' + txt + '</span></div>';
+  }
+  return '<div class="stack" style="gap:6px;background:rgba(255,255,255,.07);border-radius:14px;padding:10px 12px"><div class="between" style="gap:10px"><span class="sm">Objetivo para tu media de esta semana<br><span class="xs mu">' + act.a.getDate() + '/' + (act.a.getMonth() + 1) + ' – ' + dom.getDate() + '/' + (dom.getMonth() + 1) + ' · semana pasada: ' + f1(ant.m) + ' kg</span></span><span class="n" style="font-size:20px;color:#8AA6FF;white-space:nowrap">' + f1(lo) + '–' + f1(hi) + ' kg</span></div>' + estado + '</div>';
+}
 function ritmoSemanal(semanas, actual, objMin, objMax) { // R-52 + R-153: cambio de la media de cada semana natural (lunes–domingo) frente a la anterior
   const t = hoy(); const L0 = lunes(t); const sem = [];
   for (let k = 8; k >= 0; k--) { const a = new Date(L0); a.setDate(L0.getDate() - 7 * k); const b = new Date(a); b.setDate(a.getDate() + 6); const ps = saludRango(a, b > t ? t : b).filter((x) => x.peso).map((x) => x.peso); sem.push({ a, m: media(ps), n: ps.length, curso: k === 0 }); }
@@ -1017,8 +1030,8 @@ function ritmoSemanal(semanas, actual, objMin, objMax) { // R-52 + R-153: cambio
     '<div class="between"><span class="ttl">Semana a semana</span><span class="xs mu">' + dentro + ' de ' + cerradas.length + ' semanas en objetivo</span></div>' +
     '<div class="rbars">' + barras + '</div>' +
     '<span class="xs mu">Cada barra compara tu media de lunes a domingo con la de la semana anterior; la fecha es el lunes. Las semanas cerradas ya no cambian. La de esta semana (punteada) se va completando hasta el domingo.</span>' +
-    '<div class="between" style="gap:10px;background:rgba(255,255,255,.07);border-radius:14px;padding:10px 12px"><span class="sm">Objetivo para tu media de los próximos 7 días</span><span class="n" style="font-size:20px;color:var(--acTx);white-space:nowrap">' + num(actual.m + objMin, 1) + '–' + num(actual.m + objMax, 1) + ' kg</span></div>' +
-    '<span class="xs mu">Verde: bajaste entre 0,25 % y 0,5 % de tu peso esa semana (' + num(-objMax, 2) + '–' + num(-objMin, 2) + ' kg). Naranja: subiste, o bajaste más lento o más rápido de lo previsto.</span></div>';
+    objetivoSemana(sem) +
+    '<span class="xs mu">Verde: tu media bajó entre 0,25 % y 0,5 % respecto a la semana anterior. Naranja: subiste, o bajaste más lento o más rápido de lo previsto.</span></div>';
 }
 function vNutricion() {
   const t = hoy();
