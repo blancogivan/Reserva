@@ -861,7 +861,7 @@ function parseSalud(text) { // R-145, R-146
       const k = ymd(d);
       if (tipo === 'Sleep') sleep.push({ a: d, b: new Date(d.getTime() + durSeg(dur) * 1000), v: valor });
       else if (tipo === 'Resting Heart Rate') fc[k] = Math.round(parseFloat(valor));
-      else if (tipo === 'Weight') { if (!peso[k] || d > peso[k].d) peso[k] = { d, v: Math.round(parseFloat(valor) * 100) / 100 }; }
+      else if (tipo === 'Weight') { if (!peso[k] || d < peso[k].d) peso[k] = { d, v: Math.round(parseFloat(valor) * 100) / 100 }; }
       else if (tipo === 'Dietary Calories') kcal[k] = (kcal[k] || 0) + parseFloat(valor);
       else if (tipo === 'Protein') prot[k] = (prot[k] || 0) + parseFloat(valor);
     }
@@ -879,7 +879,7 @@ function parseSalud(text) { // R-145, R-146
     dia(ymd(fin)).sueno = { min: Math.round(dorm), desp: Math.round(desp), ini: ymd(ini) + 'T' + hm(ini).padStart(5, '0'), fin: ymd(fin) + 'T' + hm(fin).padStart(5, '0'), fuente: 'Apple Watch', fases: Object.fromEntries(Object.entries(fases).map(([k, v]) => [k, Math.round(v)])) };
   }
   for (const k in fc) dia(k).fc = fc[k];
-  for (const k in peso) dia(k).peso = peso[k].v;
+  for (const k in peso) { dia(k).peso = peso[k].v; dia(k).pesoH = hm(peso[k].d); } // R-156: la primera pesada del día (en ayunas)
   for (const k in kcal) dia(k).kcal = Math.round(kcal[k]);
   for (const k in prot) dia(k).prot = Math.round(prot[k]);
   return out;
@@ -904,7 +904,8 @@ async function importarSaludTexto(txt, silencioso) {
   if (!n) { if (!silencioso) aviso('Ese archivo no tiene datos de Salud. Elige reserva_salud.txt.'); return; }
   const meses = {};
   for (const k in nuevos) { const m = k.slice(0, 7); meses[m] = meses[m] || JSON.parse(JSON.stringify(S.salud[m] || {})); const prev = meses[m][k.slice(8)] || {}; const nv = Object.assign({}, nuevos[k]);
-    if (prev.sueno && nv.sueno && prev.sueno.min > nv.sueno.min) nv.sueno = prev.sueno; // una noche cortada al principio de la ventana no pisa la completa
+    if (prev.sueno && nv.sueno && prev.sueno.min > nv.sueno.min) nv.sueno = prev.sueno;
+    if (prev.peso != null && prev.pesoH && nv.pesoH && prev.pesoH.padStart(5, '0') < nv.pesoH.padStart(5, '0')) { nv.peso = prev.peso; nv.pesoH = prev.pesoH; } // R-156 // una noche cortada al principio de la ventana no pisa la completa
     meses[m][k.slice(8)] = Object.assign({}, prev, nv); }
   try {
     for (const m in meses) { S.salud[m] = meses[m]; if (S.db) await S.db.collection('salud').doc(m).set({ dias: meses[m] }); else { const o = ls.get('local.salud') || {}; o[m] = { dias: meses[m] }; ls.set('local.salud', o); } }

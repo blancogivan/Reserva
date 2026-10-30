@@ -1,5 +1,5 @@
 // Reserva · funciona sin cobertura: guarda la app en el móvil y la actualiza cuando hay conexión.
-const CACHE = 'reserva-v7';
+const CACHE = 'reserva-v8';
 const APP = ['./', 'index.html', 'config.js', 'manifest.webmanifest', 'icon-192.png', 'apple-touch-icon.png',
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js'];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(APP)).then(() => self.skipWaiting())); });
