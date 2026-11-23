@@ -1703,7 +1703,7 @@ async function sincronizarSalud() { // lo que envió el atajo entra solo (R-146)
 }
 
 arrancar();
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then((reg) => { document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); }); }).catch(() => {}); let recargada = false; const habia = !!navigator.serviceWorker.controller; navigator.serviceWorker.addEventListener('controllerchange', () => { if (!habia || recargada) return; recargada = true; location.reload(); }); }
 </script>
 
 </body>

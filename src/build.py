@@ -49,7 +49,7 @@ rep("""      }, () => { aviso('Se ha perdido la conexión con tus datos. Recarga
     const refrescar = () => { if (document.visibilityState === 'visible') Nube.pull().then(() => sincronizarSalud()); };
     document.addEventListener('visibilitychange', refrescar); window.addEventListener('online', refrescar);
     window.addEventListener('nube', () => { const tag = document.activeElement?.tagName; if (tag !== 'INPUT' && tag !== 'SELECT') render(); });""")
-rep("arrancar();\n</script>", open('nube.js').read() + open('cuenta.js').read() + "\narrancar();\nif ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});\n</script>")
+rep("arrancar();\n</script>", open('nube.js').read() + open('cuenta.js').read() + "\narrancar();\nif ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then((reg) => { document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); }); }).catch(() => {}); let recargada = false; const habia = !!navigator.serviceWorker.controller; navigator.serviceWorker.addEventListener('controllerchange', () => { if (!habia || recargada) return; recargada = true; location.reload(); }); }\n</script>")
 head = """<!doctype html>
 <html lang="es">
 <head>
