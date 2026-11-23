@@ -667,9 +667,15 @@ function vCambioEj() {
     (rid ? '<div class="seg"><button type="button" data-act="cambioScope" data-v="hoy" aria-pressed="' + (S.cambioScope !== 'rutina') + '">Solo hoy</button><button type="button" data-act="cambioScope" data-v="rutina" aria-pressed="' + (S.cambioScope === 'rutina') + '">También en ' + esc(S.rut[rid]?.nombre || 'la rutina') + '</button></div>' : '') +
     '<div class="card pad stack"><label for="buscarC" class="cap">Buscar</label><input id="buscarC" class="field" type="search" placeholder="remo, máquina, polea…" value="' + esc(S.qc || '') + '" autocomplete="off">' +
     '<div id="resC">' + resultadosCambio(mis, otros, fila) + '</div></div>' +
-    '<div class="card pad stack"><span class="ttl sm2">¿No está en la lista?</span><span class="xs mu">Créalo como variante de ' + esc(nombre(cur.ej)) + ': contará para los mismos músculos (' + esc(Object.keys(S.cat[cur.ej]?.musculos || {}).join(', ')) + ').</span>' +
-    '<input id="nuevoEj" class="field" placeholder="p. ej. Remo iso-lateral en máquina" autocomplete="off" value="' + esc(S.nuevoEj || '') + '"><button class="btn" data-act="crearEj">Crear y usar</button></div>' +
+    '<div class="card pad stack"><span class="ttl sm2">¿No está en la lista?</span><span class="xs mu">Créalo aquí. Elige el músculo que trabaja: si es el mismo que ' + esc(nombre(cur.ej)) + ', copia también sus músculos secundarios.</span>' +
+    '<input id="nuevoEj" class="field" placeholder="p. ej. Remo iso-lateral en máquina" autocomplete="off" value="' + esc(S.nuevoEj || '') + '">' + selMusculo(cur.ej) + '<button class="btn" data-act="crearEj">Crear y usar</button></div>' +
     '<p class="mu xs" style="margin:0;padding:0 4px">Si cambias un ejercicio por dolor, no lo fuerces: si el dolor sigue, consúltalo con un fisioterapeuta o un médico.</p></div>';
+}
+function principal(ej) { const m = S.cat[ej]?.musculos || {}; return Object.keys(m).find((k) => m[k] === 1) || Object.keys(m)[0] || ''; }
+function selMusculo(ej) {
+  const set = new Set(); for (const k in S.cat) for (const [m, w] of Object.entries(S.cat[k].musculos || {})) if (w === 1) set.add(m);
+  const def = principal(ej);
+  return '<label class="lbl xs mu" for="nuevoMus">Músculo principal<select id="nuevoMus" class="field">' + [...set].sort((a, b) => a.localeCompare(b, 'es')).map((m) => '<option' + (m === def ? ' selected' : '') + '>' + esc(m) + '</option>').join('') + '</select></label>';
 }
 function resultadosCambio(mis, otros, fila) {
   return (mis.length ? '<span class="cap" style="margin-top:6px">Mismo tipo de ejercicio</span>' + mis.map(fila).join('') : '') +
@@ -691,7 +697,9 @@ async function crearEjercicio() {
   const base = S.cat[cur.ej] || {};
   const ex = Object.keys(S.cat).find((k) => S.cat[k].nombre.toLowerCase() === nom.toLowerCase()); if (ex) { await aplicarCambio(ex); return; }
   let id = nom.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'ej'; while (S.cat[id]) id += '-2';
-  const items = Object.assign({}, S.cat, { [id]: { nombre: nom, grupo: base.grupo || 'otro', musculos: Object.assign({}, base.musculos || {}), compuesto: !!base.compuesto, ayuda: !!base.ayuda, inc: base.inc || 2.5, creado: ymd(hoy()) } });
+  const mus = $('#nuevoMus')?.value || principal(cur.ej); const igual = mus === principal(cur.ej);
+  const ref = igual ? base : (S.cat[Object.keys(S.cat).find((k) => principal(k) === mus)] || {}); // R-154: músculos del ejercicio elegido, no siempre los del sustituido
+  const items = Object.assign({}, S.cat, { [id]: { nombre: nom, grupo: ref.grupo || 'otro', musculos: igual ? Object.assign({}, base.musculos || {}) : { [mus]: 1 }, compuesto: igual ? !!base.compuesto : false, ayuda: false, inc: ref.inc || 2.5, creado: ymd(hoy()) } });
   S.cat = items; try { await guardar('catalogo', 'ejercicios', { items }); } catch (e) { return; }
   await aplicarCambio(id);
 }
