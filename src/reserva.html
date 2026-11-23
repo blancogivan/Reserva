@@ -228,6 +228,8 @@ svg { display: block; }
 .ttl.sm2 { font-size: 17px; }
 .sescard { display: block; width: 100%; padding: 0; text-align: left; font: inherit; color: var(--tx); cursor: pointer; -webkit-tap-highlight-color: transparent; transition: transform .12s; }
 .sescard:active { transform: scale(.985); }
+.notaej { display: flex; gap: 8px; align-items: flex-start; align-self: flex-start; text-align: left; padding: 8px 12px; border-radius: 12px; border: 1px dashed rgba(138,166,255,.5); background: rgba(138,166,255,.10); color: var(--tx); font: inherit; font-size: 14px; cursor: pointer; }
+.notaej svg { width: 16px; height: 16px; flex: 0 0 auto; margin-top: 2px; color: #8AA6FF; }
 </style>
 
 <div class="bgfx" aria-hidden="true"></div>
@@ -277,6 +279,7 @@ const nombre = (id) => S.cat[id]?.nombre || id;
 const ls = { get(k) { try { return JSON.parse(localStorage.getItem('reserva.' + k)); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem('reserva.' + k, JSON.stringify(v)); } catch (e) {} } };
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const I = {
+  pin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-4-4L4 16z"/></svg>',
   back: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>',
   play: '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l12-7.5z"/></svg>',
   plus: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
@@ -422,14 +425,16 @@ function vHoy() {
   } else if (!rut) {
     main = '<div class="empty">Cargando tus rutinas…</div>';
   } else {
-    const base = (S.draft?.fecha === ymd(d) ? S.draft.items : rut.ejercicios); const items = deloadActivo() ? planDeload(base) : base; // R-82
+    const base = (S.draft?.fecha === ymd(d) ? S.draft.items : ajustarItems(rid, rut.ejercicios)); /* R-157 */ const items = deloadActivo() ? planDeload(base) : base; // R-82
     const marca = semanaMarcada();
     const series = items.reduce((t, e) => t + e.series, 0);
-    const lista = items.map((e) => { const s = sugerencia(e.ej, e); const tag = s.tipo === 'sube' ? '<span class="chip warn">Sube peso</span>' : s.tipo === 'nuevo' ? '<span class="chip ac">Nuevo</span>' : ''; return '<div class="between" style="padding:9px 0"><span class="minw"><span style="font-weight:600">' + esc(nombre(e.ej)) + '</span><br><span class="mu xs n" style="font-size:13px">' + e.series + ' × ' + e.min + '–' + e.max + (s.kg != null ? ' · ' + kgf(s.kg) + ' kg' : '') + '</span></span>' + tag + '</div>'; }).join('');
+    const lista = items.map((e) => { const s = sugerencia(e.ej, e); const tag = s.tipo === 'sube' ? '<span class="chip warn">Sube peso</span>' : s.tipo === 'nuevo' ? '<span class="chip ac">Nuevo</span>' : ''; return '<div class="between" style="padding:9px 0"><span class="minw"><span style="font-weight:600">' + esc(nombre(e.ej)) + '</span><br><span class="mu xs n" style="font-size:13px">' + e.series + ' × ' + e.min + '–' + e.max + (s.kg != null ? ' · ' + kgf(s.kg) + ' kg' : '') + '</span>' + (e.extra ? '<br><span class="xs" style="color:#8AA6FF;font-weight:700">+1 serie · ' + esc(e.motivo) + ' va corto esta semana</span>' : '') + '</span>' + tag + '</div>'; }).join('');
     main = '<section class="hero' + (rut.tipo === 'pierna' ? ' leg' : '') + '" aria-label="Rutina de hoy"><div class="stack">' +
       '<div class="between"><span class="cap">' + (r.descanso && !S.draft ? 'Hoy toca descanso · la siguiente es el ' + esc(r.cuando || '') : 'Rutina de hoy') + '</span>' + (hecha ? '<span class="chip ok">' + I.check + 'Hecha</span>' : marca ? '<span class="chip">' + ESTADOS[marca] + '</span>' : deloadActivo() ? '<span class="chip leg">Descarga</span>' : '') + '</div>' +
       '<h2 class="d" style="font-size:56px">' + esc(rut.nombre) + '</h2><span class="mu sm n" style="font-size:14px">' + items.length + ' ejercicios · ' + series + ' series</span>' +
       (r.swapped ? '<div class="note sm">Esta semana tienes partido el lunes o el martes, así que Pierna y Repaso se han intercambiado.</div>' : '') +
+      (() => { if (hecha || S.draft?.fecha === ymd(d)) return ''; const pc = pendienteClave(rid); return pc ? '<div class="note sm stack" style="gap:8px"><span><b>' + esc(S.rut[pc.rid].nombre) + ' se quedó sin hacer</b> y es la única rutina de la semana que entrena ' + esc(pc.solos.slice(0, 3).join(', ').toLowerCase()) + '. Si hoy solo puedes hacer una, mejor esa.</span><button class="btn sec slim" data-act="elegir" data-id="' + pc.rid + '" style="align-self:flex-start">Hacer ' + esc(S.rut[pc.rid].nombre) + ' hoy</button></div>' : ''; })() +
+      (items.some((e) => e.extra) ? '<span class="xs mu">Hoy lleva ' + items.filter((e) => e.extra).length + (items.filter((e) => e.extra).length === 1 ? ' serie extra' : ' series extra') + ' (unos ' + items.filter((e) => e.extra).length * 2.5 + ' min) para llegar a tu objetivo semanal. Sin ejercicios nuevos.</span>' : '') +
       '<div class="list">' + lista + '</div>' +
       '<button class="btn" data-act="empezar">' + I.play + (r.descanso && !S.draft ? 'Entrenar igualmente' : 'Empezar') + '</button>' +
       '<div class="row" style="justify-content:space-between"><button class="link" data-act="ir" data-v="cambiar">Cambiar rutina</button><button class="link" data-act="editar">Editar ejercicios</button></div>' +
@@ -455,11 +460,57 @@ function vCambiar() {
     '<button type="button" class="dash" data-act="libre" style="justify-content:flex-start;padding:14px 16px;color:var(--tx)"><span class="icon" style="background:var(--acSoft);color:var(--acTx);border:0;border-radius:22px">' + I.plus + '</span><span style="text-align:left"><b>Sesión libre</b><br><span class="mu sm">Empieza en blanco y añade los ejercicios que quieras</span></span></button></div>';
 }
 
+/* ---------- R-157: series semanales que se reparten solas ----------
+   objetivo por músculo = series del plan semanal (recuento fraccionado, R-10).
+   déficit = objetivo − hecho esta semana − lo que aún queda por hacer (incluida la rutina de hoy).
+   Solo se suben series de ejercicios que ya están hoy y trabajan ese músculo de forma directa: nunca ejercicios nuevos. */
+const EXTRA_MAX = () => Math.max(0, Math.min(3, S.aj?.extraMax ?? 2));
+function musRutina(rid) { const v = {}; for (const e of S.rut[rid]?.ejercicios || []) { const m = S.cat[e.ej]?.musculos || {}; for (const k in m) v[k] = (v[k] || 0) + m[k] * e.series; } return v; }
+function estadoSemana(ridHoy) {
+  const d = hoy(); const L = lunes(d); const { plan } = semanaPlan(d);
+  const obj = {}, hecho = {}, queda = {};
+  const pos = (wd) => (+wd + 6) % 7; const hoyPos = pos(d.getDay());
+  const pend = [], restantes = [];
+  for (const wd in plan) {
+    const rid = plan[wd]; const m = musRutina(rid); for (const k in m) obj[k] = (obj[k] || 0) + m[k];
+    if (hechaEstaSemana(rid, d)) continue;
+    if (pos(wd) < hoyPos) pend.push(rid); else restantes.push(rid);
+  }
+  for (const s of S.ses) { const sd = parseD(s.fecha); const k = dias(L, sd); if (k < 0 || k > 6) continue; for (const e of s.ejercicios || []) { const m = S.cat[e.ej]?.musculos || {}; for (const x in m) hecho[x] = (hecho[x] || 0) + m[x] * e.series.length; } }
+  const quedan = restantes.filter((r) => r !== ridHoy).concat(ridHoy ? [ridHoy] : []);
+  for (const r of quedan) { const m = musRutina(r); for (const k in m) queda[k] = (queda[k] || 0) + m[k]; }
+  const def = {}; for (const k in obj) { const v = obj[k] - (hecho[k] || 0) - (queda[k] || 0); if (v >= 0.75) def[k] = v; }
+  return { def, pend: pend.filter((r) => r !== ridHoy), restantes: restantes.filter((r) => r !== ridHoy) };
+}
+// una rutina pendiente que entrena músculos que ninguna de las que quedan cubre (p. ej. Pierna) → proponer hacerla hoy
+function pendienteClave(ridHoy) {
+  if (deloadActivo() || semanaMarcada()) return null;
+  const st = estadoSemana(ridHoy);
+  for (const r of st.pend) {
+    const cub = {}; for (const x of st.restantes.concat(ridHoy ? [ridHoy] : [])) Object.assign(cub, musRutina(x));
+    const solos = Object.entries(S.rut[r]?.ejercicios.reduce((o, e) => { for (const [k, w] of Object.entries(S.cat[e.ej]?.musculos || {})) if (w === 1) o[k] = 1; return o; }, {}) || {}).map(([k]) => k).filter((k) => !cub[k]);
+    if (solos.length) return { rid: r, solos };
+  }
+  return null;
+}
+function ajustarItems(rid, items) {
+  const out = items.map((e) => Object.assign({}, e)); out.forEach((e) => { delete e.extra; delete e.motivo; });
+  if (!rid || deloadActivo() || semanaMarcada() || hechaEstaSemana(rid, hoy())) return out;
+  const { def } = estadoSemana(rid); let libre = EXTRA_MAX();
+  const orden = Object.keys(def).sort((a, b) => (PRIORITARIOS[b] ? 1 : 0) - (PRIORITARIOS[a] ? 1 : 0) || def[b] - def[a]);
+  for (const m of orden) {
+    if (libre <= 0) break;
+    const e = out.find((x) => !x.extra && x.series < 5 && (S.cat[x.ej]?.musculos || {})[m] === 1);
+    if (!e) continue;
+    e.series += 1; e.extra = 1; e.motivo = m; libre--;
+  }
+  return out;
+}
 function asegurarDraft(rid) {
   const t = ymd(hoy());
   if (!S.draft || S.draft.fecha !== t || (rid && S.draft.rid !== rid)) {
     const r = S.rut[rid || rutinaDeHoy().rid];
-    S.draft = { fecha: t, rid: rid || rutinaDeHoy().rid, nombre: r?.nombre || 'Sesión', items: (r?.ejercicios || []).map((e) => Object.assign({}, e)) };
+    S.draft = { fecha: t, rid: rid || rutinaDeHoy().rid, nombre: r?.nombre || 'Sesión', items: ajustarItems(rid || rutinaDeHoy().rid, r?.ejercicios || []) }; // R-157
   }
 }
 function vEditar() {
@@ -531,6 +582,8 @@ function vSesion() {
     '<div class="prog">' + prog + '</div>' +
     '<section class="hero' + (/cuad|isquios|gluteo|gemelo|abdomen/.test(c.grupo || '') ? ' leg' : '') + '"><div class="stack" style="gap:8px">' +
     '<h1 class="d" style="font-size:36px">' + esc(nombre(e.ej)) + '</h1>' +
+    (S.notaEdit === e.ej ? '<div class="stack" style="gap:6px"><input id="notaTxt" class="field" maxlength="140" placeholder="p. ej. asiento 4 · agarre neutro · banco a 30°" value="' + esc(S.notas?.[e.ej] || '') + '"><div class="row" style="gap:6px"><button class="btn slim" data-act="notaGuardar" data-ej="' + e.ej + '">Guardar nota</button><button class="btn sec slim" data-act="notaCancelar">Cancelar</button></div></div>'
+      : S.notas?.[e.ej] ? '<button type="button" class="notaej" data-act="notaEditar" data-ej="' + e.ej + '" aria-label="Editar nota">' + I.pin + '<span>' + esc(S.notas[e.ej]) + '</span></button>' : '<button type="button" class="link" data-act="notaEditar" data-ej="' + e.ej + '" style="align-self:flex-start;padding-left:0">+ Nota de la máquina</button>') +
     '<div class="row" style="flex-wrap:wrap;gap:6px">' + Object.entries(c.musculos || {}).filter(([, w]) => w === 1).map(([m]) => '<span class="chip ac">' + esc(m) + '</span>').join('') + '<span class="chip">' + plan.series + ' series · ' + plan.min + '–' + plan.max + ' reps · RIR ' + esc(plan.rir) + '</span></div>' +
     (n === 0 ? '<button type="button" class="btn sec slim" data-act="cambioEj" data-src="sesion" data-i="' + i + '" style="align-self:flex-start">Cambiar por otro ejercicio</button>' : '') + (sug.ult ? '<span class="mu sm">Última vez (' + fCorta(parseD(sug.fecha)) + '): <span class="n" style="font-size:15px;color:var(--tx)">' + esc(sug.ult) + '</span></span>' : '') +
     '<span class="sm" style="' + (sug.tipo === 'sube' ? 'color:var(--warn);font-weight:700' : 'color:var(--tx2)') + '">' + esc(sug.txt || '') + '</span>' +
@@ -608,7 +661,7 @@ async function aplicarCambio(nuevo) {
   if (c.src === 'sesion') { const a = S.activa; a.ejercicios[c.i] = prepEj({ ej: nuevo, series: cur.plan.series, min: cur.plan.min, max: cur.plan.max, rir: cur.plan.rir }); a.extra = false; cargarInputs(); guardarActiva(); }
   else { S.draft.items[c.i] = Object.assign({}, S.draft.items[c.i], { ej: nuevo }); S.altOpen = -1; }
   const rid = c.src === 'sesion' ? S.activa.rutina : S.draft.rid;
-  if (S.cambioScope === 'rutina' && rid && S.rut[rid]) { const r = JSON.parse(JSON.stringify(S.rut[rid])); const it = r.ejercicios.find((x) => x.ej === cur.ej); if (it) { it.ej = nuevo; await guardar('rutinas', rid, r).catch(() => {}); } }
+  if (S.cambioScope === 'rutina' && rid && S.rut[rid]) { const r = JSON.parse(JSON.stringify(S.rut[rid])); const it = r.ejercicios.find((x) => x.ej === cur.ej); if (r.ejercicios.some((x) => x.ej === nuevo)) { aviso(nombre(nuevo) + ' ya está en la rutina: solo se cambia hoy'); S.cambioScope = 'hoy'; } else if (it) { it.ej = nuevo; await guardar('rutinas', rid, r).catch(() => {}); } }
   aviso('Cambiado por ' + nombre(nuevo) + (S.cambioScope === 'rutina' && rid ? ' (también en la rutina)' : ' (solo hoy)'));
   S.cambio = null; S.qc = ''; S.nuevoEj = ''; S.cambioScope = 'hoy'; volver();
 }
@@ -1014,6 +1067,35 @@ function ritmoSemanal(semanas, actual, objMin, objMax) { // R-52 + R-153: cambio
     objetivoSemana(sem) +
     '<span class="xs mu">Verde: tu media bajó entre 0,25 % y 0,5 % respecto a la semana anterior. Naranja: subiste, o bajaste más lento o más rápido de lo previsto.</span></div>';
 }
+/* ---------- R-158: objetivo de calorías de la semana (fijo de lunes a domingo) ---------- */
+function mantenimientoHasta(fin) { // R-51 con las 4 semanas que acaban en «fin»
+  const ini = new Date(fin); ini.setDate(fin.getDate() - 27);
+  const dd = saludRango(ini, fin); const comp = dd.filter((x) => x.kcal >= DIA_COMPLETO_KCAL); const ps = dd.filter((x) => x.peso);
+  if (comp.length < 21 || ps.length < 8) return { falta: Math.max(0, 21 - comp.length), n: comp.length };
+  const xs = ps.map((x) => (x.d - ini) / 864e5), ys = ps.map((x) => x.peso); const mx = media(xs), my = media(ys);
+  const pend = xs.reduce((t, x, i) => t + (x - mx) * (ys[i] - my), 0) / xs.reduce((t, x) => t + (x - mx) ** 2, 0);
+  const mk = media(comp.map((x) => x.kcal));
+  return { tdee: mk - pend * 7700, mk, n: comp.length, kgSem: pend * 7 };
+}
+function tarjetaKcal() {
+  const t = hoy(); const L = lunes(t); const dom = new Date(L); dom.setDate(L.getDate() - 1);
+  const M = mantenimientoHasta(dom);
+  const ini7 = new Date(L); ini7.setDate(L.getDate() - 7); const pw = media(saludRango(ini7, dom).filter((x) => x.peso).map((x) => x.peso)) || media(saludRango(L, t).filter((x) => x.peso).map((x) => x.peso));
+  if (M.tdee == null || !pw) return '<section class="card pad stack" style="gap:6px"><span class="ttl">Objetivo de calorías</span><span class="sm" style="color:var(--tx2)">Aparecerá cuando haya 21 días de comida completos en 4 semanas (llevas ' + M.n + ').</span></section>';
+  const r10 = (x) => Math.round(x / 10) * 10; const cl = (x) => Math.max(200, Math.min(500, x));
+  const dLo = cl(0.0025 * pw * 7700 / 7), dHi = cl(0.005 * pw * 7700 / 7); // R-52 + R-50
+  const lo = r10(M.tdee - dHi), hi = r10(M.tdee - dLo); const prot = Math.round(1.6 * pw); // R-53
+  const ayer = new Date(t); ayer.setDate(t.getDate() - 1);
+  const sem = L <= ayer ? saludRango(L, ayer).filter((x) => x.kcal >= DIA_COMPLETO_KCAL) : [];
+  const fmt = (x) => x.toLocaleString('es-ES');
+  const fin = new Date(L); fin.setDate(L.getDate() + 6);
+  let lleva = '<span class="xs mu">Aún no hay días completos esta semana.</span>';
+  if (sem.length) { const mk = media(sem.map((x) => x.kcal)); const ok = mk >= lo && mk <= hi; lleva = '<div class="between xs" style="gap:8px;flex-wrap:wrap"><span class="mu">Llevas <b class="n" style="font-size:14px;color:var(--tx)">' + fmt(r10(mk)) + ' kcal</b> de media (' + sem.length + (sem.length === 1 ? ' día' : ' días') + ')</span><span style="font-weight:700;color:' + (ok ? 'var(--ok)' : 'var(--warn)') + '">' + (ok ? 'dentro' : mk > hi ? fmt(r10(mk - hi)) + ' por encima' : fmt(r10(lo - mk)) + ' por debajo') + '</span></div>'; }
+  return '<section class="hero plain"><div class="stack" style="gap:8px"><div class="between"><span class="ttl">Tu objetivo esta semana</span><span class="xs mu">' + L.getDate() + '/' + (L.getMonth() + 1) + ' – ' + fin.getDate() + '/' + (fin.getMonth() + 1) + '</span></div>' +
+    '<div class="row" style="align-items:baseline;gap:8px;flex-wrap:wrap"><span class="d" style="font-size:44px">' + fmt(lo) + '–' + fmt(hi) + '</span><span class="mu" style="font-size:16px">kcal/día</span></div>' +
+    '<span class="sm" style="color:var(--tx2)">y al menos <b>' + prot + ' g de proteína</b></span>' + lleva +
+    '<span class="xs mu">Tu gasto real estimado es ' + fmt(r10(M.tdee)) + ' kcal (4 semanas hasta el domingo). Le resto lo justo para bajar un 0,25–0,5 % de peso por semana. Se recalcula cada lunes: si no bajas, el objetivo se ajusta solo.</span></div></section>';
+}
 function vNutricion() {
   const t = hoy();
   // peso: media móvil de 7 días (R-100); cada punto son los 7 días que acaban en hoy, hace 1 semana, hace 2…
@@ -1064,13 +1146,13 @@ function vNutricion() {
     const mk = media(completos.map((x) => x.kcal)); const tdee = mk - pend * 7700;
     const def = tdee - mk;
     mant = '<section class="hero plain"><div class="stack" style="gap:8px"><span class="ttl">Lo que gastas de verdad</span><span class="d" style="font-size:44px">' + Math.round(tdee / 10) * 10 + '<span class="mu" style="font-size:18px"> kcal/día</span></span>' +
-      '<span class="sm" style="color:var(--tx2)">Para bajar grasa sin perder músculo, come entre <b>' + (Math.round((tdee - 400) / 10) * 10).toLocaleString('es-ES') + ' y ' + (Math.round((tdee - 200) / 10) * 10).toLocaleString('es-ES') + ' kcal</b> y al menos <b>' + Math.round(1.6 * (pesoRef || 0)) + ' g de proteína</b> al día.</span>' +
+      '<span class="sm" style="color:var(--tx2)">Calculado con las 4 semanas hasta hoy, así que cambia un poco cada día. Tu objetivo de la semana (arriba) usa el cálculo del lunes.</span>' +
       (def > 500 ? '<div class="note warn sm" style="color:var(--tx)">Estás comiendo más de 500 kcal por debajo de tu mantenimiento. Un déficit tan grande puede frenar la ganancia de músculo.</div>' : '') +
       '<span class="xs mu">Calculado con ' + completos.length + ' días de comida y la tendencia de tu peso de las últimas 4 semanas (≈7.700 kcal por kg). Es una aproximación: se recalcula cada vez que actualizas.</span></div></section>';
   } else {
     mant = '<section class="hero plain"><div class="stack" style="gap:8px"><span class="ttl">Lo que gastas de verdad</span><span class="sm" style="color:var(--tx2)">Se calcula con lo que comes y cómo cambia tu peso, no con las calorías del reloj. Hacen falta ' + NEC + ' días completos de comida en 4 semanas.</span><div class="between xs mu"><span>' + completos.length + ' de ' + NEC + ' días</span><span>' + Math.max(0, NEC - completos.length) + ' por completar</span></div><div class="bar" style="background:rgba(255,255,255,.10)"><i style="width:' + Math.min(100, completos.length / NEC * 100) + '%"></i></div></div></section>';
   }
-  return '<div class="wrap">' + modoAviso() + '<div class="stack" style="gap:4px"><h1 class="d">Nutrición</h1><span class="mu sm">Tu peso, lo que comes y lo que gastas, de un vistazo</span></div>' + botonSalud() + pesoCard + comida + mant +
+  return '<div class="wrap">' + modoAviso() + '<div class="stack" style="gap:4px"><h1 class="d">Nutrición</h1><span class="mu sm">Tu peso, lo que comes y lo que gastas, de un vistazo</span></div>' + botonSalud() + tarjetaKcal() + pesoCard + comida + mant +
     '<p class="mu xs" style="margin:0;padding:0 4px">Datos de Foodvisor y de tu báscula, a través de Apple Salud y tu atajo. Esto no es consejo médico: si tienes alguna condición de salud, consulta con un profesional antes de cambiar tu dieta.</p></div>' + tabs('nutricion');
 }
 
@@ -1357,6 +1439,9 @@ document.addEventListener('click', async (ev) => {
     case 'cambiarA': await aplicarCambio(b.dataset.id); break;
     case 'crearEj': await crearEjercicio(); break;
     case 'cambioScope': S.cambioScope = v; S.nuevoEj = $('#nuevoEj')?.value || ''; render(); break;
+    case 'notaEditar': S.notaEdit = b.dataset.ej; render(); setTimeout(() => $('#notaTxt')?.focus(), 30); break;
+    case 'notaCancelar': S.notaEdit = null; render(); break;
+    case 'notaGuardar': { const txt = ($('#notaTxt')?.value || '').trim(); const items = Object.assign({}, S.notas || {}); if (txt) items[b.dataset.ej] = txt; else delete items[b.dataset.ej]; S.notas = items; S.notaEdit = null; if (S.db) S.db.collection('ajustes').doc('notas').set({ items }).catch(() => aviso('No se ha podido guardar la nota.')); else { const o = ls.get('local.ajustes') || {}; o.notas = { items }; ls.set('local.ajustes', o); } aviso(txt ? 'Nota guardada' : 'Nota borrada'); render(); break; } // R-159
     case 'calSel': S.calSel = v; render(); break;
     case 'detSes': S.detId = b.dataset.id; ir('detSes'); break;
     case 'mes': { const t = hoy(); const M = S.calMes || new Date(t.getFullYear(), t.getMonth(), 1); S.calMes = new Date(M.getFullYear(), M.getMonth() + (+b.dataset.d), 1); render(); break; }
@@ -1404,7 +1489,7 @@ function aplicar(col, docs) {
   if (col === 'rutinas') { S.rut = {}; for (const d of docs) { const o = Object.assign({}, d); delete o._id; S.rut[d._id] = o; } }
   if (col === 'sesiones') S.ses = docs;
   if (col === 'actividades') S.act = docs;
-  if (col === 'ajustes') { S.aj = docs.find((x) => x._id === 'general') || S.aj; S.saludMeta = docs.find((x) => x._id === 'salud') || S.saludMeta; S.estado = docs.find((x) => x._id === 'estado') || S.estado; }
+  if (col === 'ajustes') { S.aj = docs.find((x) => x._id === 'general') || S.aj; S.saludMeta = docs.find((x) => x._id === 'salud') || S.saludMeta; S.estado = docs.find((x) => x._id === 'estado') || S.estado; S.notas = docs.find((x) => x._id === 'notas')?.items || S.notas || {}; }
   if (col === 'salud') { S.salud = {}; for (const d of docs) S.salud[d._id] = d.dias || {}; }
   if (col === 'bienestar') { S.bien = {}; for (const d of docs) S.bien[d._id] = d; }
 }
