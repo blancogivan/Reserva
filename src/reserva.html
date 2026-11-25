@@ -258,7 +258,7 @@ const DEPORTES = ['Baloncesto (partido)','Baloncesto (entreno)','Fútbol','Páde
 const S = {
   db: null, mode: 'cargando', cat: {}, rut: {}, ses: [], act: [], aj: null, activa: null,
   view: 'hoy', prev: [], draft: null, calSel: null, calMes: null, progTab: 'resumen', ejSel: null,
-  salud: {}, bien: {}, saludMeta: null,
+  salud: {}, comida: {}, bien: {}, saludMeta: null,
   q: '', restEnd: 0, restTotal: 0, toastT: 0, scope: 'hoy', altOpen: -1, pickFor: null
 };
 
@@ -947,7 +947,11 @@ function parseSalud(text) { // R-145, R-146
 }
 
 /* ---------- acceso a los datos de salud ---------- */
-function saludDia(k) { return S.salud[k.slice(0, 7)]?.[k.slice(8)] || null; }
+function saludDia(k) { // R-160: si el día está apuntado en Bocado, sus calorías y proteína mandan sobre las de Salud
+  const v = S.salud[k.slice(0, 7)]?.[k.slice(8)] || null; const c = S.comida?.[k.slice(0, 7)]?.[k.slice(8)];
+  if (!c) return v;
+  return Object.assign({}, v || {}, { kcal: c.kcal, prot: c.prot, comidaDe: 'Bocado' });
+}
 function saludRango(desde, hasta) { // [{k, d, ...}] entre dos Date, ambos incluidos
   const out = []; const d = new Date(desde.getFullYear(), desde.getMonth(), desde.getDate());
   while (d <= hasta) { const k = ymd(d); const v = saludDia(k); if (v) out.push(Object.assign({ k, d: new Date(d) }, v)); d.setDate(d.getDate() + 1); }
@@ -1143,7 +1147,7 @@ function vNutricion() {
     const ult14 = dias28.slice(-14); const top = Math.max(3200, ...ult14.map((x) => x.kcal || 0));
     const H = 80;
     comida += '<section class="card pad stack"><div class="between"><span class="ttl">Tus últimas dos semanas</span></div><span class="xs mu" style="margin-top:-4px">Calorías de cada día · línea: tu media · gris: día sin apuntar entero</span><div class="kwrap"><span class="nline" style="bottom:' + Math.round(mk / top * H) + 'px"></span><div class="kbars">' + ult14.map((x) => '<div class="kb"><i style="height:' + Math.round(((x.kcal || 0) / top) * H) + 'px;background:' + ((x.kcal || 0) >= DIA_COMPLETO_KCAL ? 'var(--ac2)' : 'rgba(255,255,255,.18)') + '" title="' + (x.kcal || 0) + ' kcal"></i><span class="xs mu">' + x.d.getDate() + '</span></div>').join('') + '</div></div></section>';
-  } else comida = '<div class="empty">Cuando el atajo traiga días completos de Foodvisor (más de ' + DIA_COMPLETO_KCAL.toLocaleString('es-ES') + ' kcal apuntadas), aquí verás tus calorías y tu proteína.</div>';
+  } else comida = '<div class="empty">Cuando tengas días completos de comida en Bocado o en Foodvisor (más de ' + DIA_COMPLETO_KCAL.toLocaleString('es-ES') + ' kcal apuntadas), aquí verás tus calorías y tu proteína.</div>';
   // mantenimiento real (R-51)
   const NEC = 21;
   let mant;
@@ -1161,7 +1165,7 @@ function vNutricion() {
     mant = '<section class="hero plain"><div class="stack" style="gap:8px"><span class="ttl">Lo que gastas de verdad</span><span class="sm" style="color:var(--tx2)">Se calcula con lo que comes y cómo cambia tu peso, no con las calorías del reloj. Hacen falta ' + NEC + ' días completos de comida en 4 semanas.</span><div class="between xs mu"><span>' + completos.length + ' de ' + NEC + ' días</span><span>' + Math.max(0, NEC - completos.length) + ' por completar</span></div><div class="bar" style="background:rgba(255,255,255,.10)"><i style="width:' + Math.min(100, completos.length / NEC * 100) + '%"></i></div></div></section>';
   }
   return '<div class="wrap">' + modoAviso() + '<div class="stack" style="gap:4px"><h1 class="d">Nutrición</h1><span class="mu sm">Tu peso, lo que comes y lo que gastas, de un vistazo</span></div>' + botonSalud() + tarjetaKcal() + pesoCard + comida + mant +
-    '<p class="mu xs" style="margin:0;padding:0 4px">Datos de Foodvisor y de tu báscula, a través de Apple Salud y tu atajo. Esto no es consejo médico: si tienes alguna condición de salud, consulta con un profesional antes de cambiar tu dieta.</p></div>' + tabs('nutricion');
+    '<p class="mu xs" style="margin:0;padding:0 4px">Comida de Bocado (o de Foodvisor, a través de Salud, los días que no uses Bocado) y peso de tu báscula. Esto no es consejo médico: si tienes alguna condición de salud, consulta con un profesional antes de cambiar tu dieta.</p></div>' + tabs('nutricion');
 }
 
 /* =====================================================================
@@ -1334,7 +1338,7 @@ function celebrar(nom, set, r) {
 function vProx(cual) {
   const txt = cual === 'descanso'
     ? ['Descanso', 'Llega en la próxima versión. Mostrará cuánto dormiste anoche, tus últimas 7 noches frente al objetivo de 7 horas y a qué hora acostarte cuando entrenas temprano.', 'Los datos ya se están guardando cada mañana con tu atajo de Salud.']
-    : ['Nutrición', 'Llega en la próxima versión. Mostrará la tendencia de tu peso frente a tu objetivo, calorías y proteína de Foodvisor, y tu gasto real calculado con lo que comes y cómo cambia tu peso.', 'Los datos ya se están guardando cada mañana con tu atajo de Salud.'];
+    : ['Nutrición', 'Llega en la próxima versión. Mostrará la tendencia de tu peso frente a tu objetivo, calorías y proteína de Bocado o Foodvisor, y tu gasto real calculado con lo que comes y cómo cambia tu peso.', 'Los datos ya se están guardando cada mañana con tu atajo de Salud.'];
   return '<div class="wrap"><h1 class="d">' + txt[0] + '</h1><div class="note">' + txt[1] + '</div><p class="mu sm" style="margin:0">' + txt[2] + '</p></div>' + tabs(cual);
 }
 
@@ -1499,6 +1503,7 @@ function aplicar(col, docs) {
   if (col === 'actividades') S.act = docs;
   if (col === 'ajustes') { S.aj = docs.find((x) => x._id === 'general') || S.aj; S.saludMeta = docs.find((x) => x._id === 'salud') || S.saludMeta; S.estado = docs.find((x) => x._id === 'estado') || S.estado; S.notas = docs.find((x) => x._id === 'notas')?.items || S.notas || {}; }
   if (col === 'salud') { S.salud = {}; for (const d of docs) S.salud[d._id] = d.dias || {}; }
+  if (col === 'comida') { S.comida = {}; for (const d of docs) S.comida[d._id] = d.dias || {}; } // lo escribe Bocado (R-160)
   if (col === 'bienestar') { S.bien = {}; for (const d of docs) S.bien[d._id] = d; }
 }
 async function arrancar() {
@@ -1507,7 +1512,7 @@ async function arrancar() {
   try { db = window.claude?.use ? await window.claude.use('db') : null; } catch (e) { db = null; }
   if (db) {
     S.db = db; S.mode = 'nube';
-    const cols = ['catalogo', 'rutinas', 'sesiones', 'actividades', 'ajustes', 'salud', 'bienestar'];
+    const cols = ['catalogo', 'rutinas', 'sesiones', 'actividades', 'ajustes', 'salud', 'bienestar', 'comida'];
     let pending = cols.length;
     for (const col of cols) {
       db.collection(col).limit(1000).onSnapshot((snap) => {
@@ -1524,7 +1529,7 @@ async function arrancar() {
     const seed = window.__RESERVA_SEED || [];
     const by = {};
     for (const o of seed) (by[o.collection] = by[o.collection] || {})[o.doc_id] = o.data;
-    for (const col of ['catalogo', 'rutinas', 'sesiones', 'actividades', 'ajustes', 'salud', 'bienestar']) { const o = Object.assign({}, by[col] || {}, ls.get('local.' + col) || {}); aplicar(col, Object.entries(o).map(([k, d]) => Object.assign({ _id: k }, d))); }
+    for (const col of ['catalogo', 'rutinas', 'sesiones', 'actividades', 'ajustes', 'salud', 'bienestar', 'comida']) { const o = Object.assign({}, by[col] || {}, ls.get('local.' + col) || {}); aplicar(col, Object.entries(o).map(([k, d]) => Object.assign({ _id: k }, d))); }
     S.activa = ls.get('activa'); S.estado = ls.get('estado');
   }
   if (S.activa) { S.view = 'sesion'; S.prev = ['hoy']; }
