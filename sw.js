@@ -1,6 +1,6 @@
 // Reserva · funciona sin cobertura y se actualiza sola.
 // La página se pide siempre a la red primero (sin la memoria del navegador); si no hay conexión, se usa la guardada.
-const CACHE = 'reserva-v13';
+const CACHE = 'reserva-v12';
 const APP = ['./', 'index.html', 'config.js', 'manifest.webmanifest', 'icon-192.png', 'apple-touch-icon.png',
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js'];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(APP.map((u) => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting())); });
