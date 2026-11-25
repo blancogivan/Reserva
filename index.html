@@ -1109,6 +1109,13 @@ function mantenimientoHasta(fin) { // R-51 con las 4 semanas que acaban en «fin
   const mk = media(comp.map((x) => x.kcal));
   return { tdee: mk - pend * 7700, mk, n: comp.length, kgSem: pend * 7 };
 }
+function tarjetaHoyComida() { // R-161: lo que llevas hoy en Bocado (el día aún no cuenta para medias ni objetivo)
+  const k = ymd(hoy()); const c = S.comida?.[k.slice(0, 7)]?.[k.slice(8)];
+  if (!c) return '';
+  return '<section class="card pad stack" style="gap:6px"><div class="between"><span class="ttl">Hoy llevas</span><span class="chip">Bocado</span></div>' +
+    '<div class="row" style="align-items:baseline;gap:8px;flex-wrap:wrap"><span class="d" style="font-size:36px">' + Math.round(c.kcal || 0).toLocaleString('es-ES') + '<span class="mu" style="font-size:16px"> kcal</span></span><span class="sm" style="color:var(--tx2)"><b class="n">' + Math.round(c.prot || 0) + ' g</b> de proteína · ' + (c.n || 0) + (c.n === 1 ? ' alimento' : ' alimentos') + '</span></div>' +
+    '<span class="xs mu">Se actualiza cada vez que apuntas en Bocado. El día cuenta para tus medias y tu objetivo a partir de mañana.</span></section>';
+}
 function tarjetaKcal() {
   const t = hoy(); const L = lunes(t); const dom = new Date(L); dom.setDate(L.getDate() - 1);
   const M = mantenimientoHasta(dom);
@@ -1184,7 +1191,7 @@ function vNutricion() {
   } else {
     mant = '<section class="hero plain"><div class="stack" style="gap:8px"><span class="ttl">Lo que gastas de verdad</span><span class="sm" style="color:var(--tx2)">Se calcula con lo que comes y cómo cambia tu peso, no con las calorías del reloj. Hacen falta ' + NEC + ' días completos de comida en 4 semanas.</span><div class="between xs mu"><span>' + completos.length + ' de ' + NEC + ' días</span><span>' + Math.max(0, NEC - completos.length) + ' por completar</span></div><div class="bar" style="background:rgba(255,255,255,.10)"><i style="width:' + Math.min(100, completos.length / NEC * 100) + '%"></i></div></div></section>';
   }
-  return '<div class="wrap">' + modoAviso() + '<div class="stack" style="gap:4px"><h1 class="d">Nutrición</h1><span class="mu sm">Tu peso, lo que comes y lo que gastas, de un vistazo</span></div>' + botonSalud() + tarjetaKcal() + pesoCard + comida + mant +
+  return '<div class="wrap">' + modoAviso() + '<div class="stack" style="gap:4px"><h1 class="d">Nutrición</h1><span class="mu sm">Tu peso, lo que comes y lo que gastas, de un vistazo</span></div>' + botonSalud() + tarjetaHoyComida() + tarjetaKcal() + pesoCard + comida + mant +
     '<p class="mu xs" style="margin:0;padding:0 4px">Comida de Bocado (o de Foodvisor, a través de Salud, los días que no uses Bocado) y peso de tu báscula. Esto no es consejo médico: si tienes alguna condición de salud, consulta con un profesional antes de cambiar tu dieta.</p></div>' + tabs('nutricion');
 }
 
